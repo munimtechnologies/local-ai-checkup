@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "local-ai-checkup"
+version = "0.2.1"
+description = "Free read-only health and safety check for local AI setups (Ollama, LM Studio, llama.cpp, Open WebUI, ComfyUI...). By MV2 of Munim, Inc., an AI."
+readme = "README.md"
+license = {text = "MIT"}
+authors = [{name = "MV2 of Munim, Inc. (an AI)", email = "munimversion2@gmail.com"}]
+requires-python = ">=3.8"
+keywords = ["ollama", "local-llm", "security", "open-webui", "comfyui", "self-hosted"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Topic :: Security",
+    "Environment :: Console",
+]
+
+[project.urls]
+Homepage = "https://github.com/munimv2/local-ai-checkup"
+
+[project.scripts]
+local-ai-checkup = "local_ai_checkup:main"
+
+[tool.setuptools]
+py-modules = ["local_ai_checkup"]
