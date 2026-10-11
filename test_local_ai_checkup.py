@@ -136,6 +136,13 @@ class AppTests(unittest.TestCase):
         self.assertEqual(lac.parse_docker_images(None), {})
         self.assertEqual(lac.parse_docker_images("Cannot connect to the Docker daemon"), {})
 
+    def test_parse_docker_images_anythingllm(self):
+        found = lac.parse_docker_images("mintplexlabs/anythingllm:latest\n")
+        self.assertEqual(found, {"anythingllm": (None, "mintplexlabs/anythingllm:latest")})
+        found = lac.parse_docker_images("docker.io/mintplexlabs/anythingllm:1.16.1\n")
+        self.assertEqual(found["anythingllm"][0], (1, 16, 1))
+        self.assertTrue(lac.AI_IMAGE_HINT.search("mintplexlabs/anythingllm"))
+
     def test_app_flaws_match_the_site_checker(self):
         # Same answers as munimv2.github.io and the Apify Actor give for these versions.
         flaws, upgrade, unfixed = lac.app_flaws("n8n", (2, 40, 0))
@@ -161,6 +168,35 @@ class AppTests(unittest.TestCase):
         self.assertEqual((len(flaws), upgrade, unfixed), (4, (1, 12, 0), 0))
         self.assertEqual(lac.app_flaws("langflow", (1, 12, 0))[0], [])
 
+    def test_anythingllm_flaws_match_the_site_checker(self):
+        # munimv2.github.io/?product=anythingllm gives these (Windows-only advisory not counted).
+        flaws, upgrade, unfixed = lac.app_flaws("anythingllm", (1, 16, 1))
+        self.assertEqual((len(flaws), upgrade, unfixed), (3, (1, 16, 2), 0))
+        self.assertIn("GHSA-3f4c-xj8r-h4cr", flaws[2])
+        flaws, upgrade, unfixed = lac.app_flaws("anythingllm", (1, 12, 1))
+        self.assertEqual((len(flaws), upgrade, unfixed), (4, (1, 16, 2), 0))
+        flaws, upgrade, unfixed = lac.app_flaws("anythingllm", (1, 11, 1))
+        self.assertEqual((len(flaws), upgrade, unfixed), (8, (1, 16, 2), 1))
+        self.assertIn("CVE-2026-32617", flaws[0])
+        self.assertEqual(lac.app_flaws("anythingllm", (1, 16, 2))[0], [])
+        self.assertEqual(lac.app_flaws("anythingllm", (1, 17, 0))[0], [])
+
+    def test_vllm_flaws_match_the_site_checker(self):
+        flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 30, 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (2, (0, 31, 0), 0))
+        self.assertIn("GHSA-h3rc-6mm3-gc2m", flaws[0])
+        self.assertEqual(len(lac.app_flaws("vllm", (0, 29, 0))[0]), 3)
+        self.assertEqual(len(lac.app_flaws("vllm", (0, 28, 0))[0]), 4)
+        flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 11, 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (14, (0, 31, 0), 0))
+        self.assertEqual(lac.app_flaws("vllm", (0, 31, 0))[0], [])
+        found = lac.parse_docker_images("vllm/vllm-openai:v0.30.0\n")
+        self.assertEqual(found["vllm"][0], (0, 30, 0))
+        version = lac.APP_ENDPOINTS["vllm"][2]
+        self.assertEqual(version({"version": "0.31.0"}), "0.31.0")
+        self.assertIsNone(version({"version": "0.31.0", "object": "list"}))
+        self.assertEqual(lac.APP_ENDPOINTS["vllm"][:2], (8000, "/version"))
+
     def test_app_endpoint_fields_are_strict(self):
         n8n, langflow, flowise, litellm = (lac.APP_ENDPOINTS[k][2] for k in ("n8n", "langflow", "flowise", "litellm"))
         self.assertEqual(n8n({"data": {"versionCli": "2.40.0"}}), "2.40.0")
@@ -172,6 +208,15 @@ class AppTests(unittest.TestCase):
         self.assertIsNone(flowise({"version": "3.1.4", "name": "something else"}))
         self.assertEqual(litellm({"status": "healthy", "litellm_version": "1.96.0"}), "1.96.0")
         self.assertIsNone(litellm({"status": "healthy"}))
+        anythingllm = lac.APP_ENDPOINTS["anythingllm"][2]
+        metrics = {"online": True, "version": "--", "mode": "single", "vectorDB": "lancedb",
+                   "storage": {"current": 1, "capacity": 2}, "appVersion": "1.17.0"}
+        self.assertEqual(anythingllm(metrics), "1.17.0")
+        self.assertIsNone(anythingllm(dict(metrics, appVersion=None)))
+        self.assertIsNone(anythingllm({"appVersion": "1.17.0"}))
+        self.assertIsNone(anythingllm({"version": "1.17.0"}))
+        self.assertEqual(lac.APP_ENDPOINTS["anythingllm"][:2], (3001, "/api/utils/metrics"))
+        self.assertIn(("AnythingLLM", 3001), lac.SERVICES)
 
     def test_report_app(self):
         rep = lac.Report()
@@ -188,6 +233,16 @@ class AppTests(unittest.TestCase):
         self.assertIn("2.41.4", rep.findings[1]["fix"])
         self.assertEqual(rep.facts["apps"]["n8n"], {"version": "2.40.0", "source": "port 5678", "advisories": 2})
         self.assertIsNone(rep.facts["apps"]["dify"]["version"])
+
+    def test_report_app_anythingllm(self):
+        rep = lac.Report()
+        lac.report_app(rep, "anythingllm", {"version": (1, 11, 1), "source": "port 3001", "lan": True})
+        f = rep.findings[0]
+        self.assertEqual(f["level"], "risk")
+        self.assertIn("8 known security advisories", f["title"])
+        self.assertIn("Update AnythingLLM to 1.16.2", f["fix"])
+        self.assertIn("1 of these list no fixed release yet", f["fix"])
+        self.assertIn("anythingllm.html", f["fix"])
 
 
 class GpuTests(unittest.TestCase):

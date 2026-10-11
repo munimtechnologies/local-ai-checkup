@@ -4,13 +4,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "local-ai-checkup"
-version = "0.4.0"
-description = "Free read-only health and safety check for local AI setups (Ollama, LM Studio, llama.cpp, Open WebUI, ComfyUI, n8n, Dify, RAGFlow, Langflow, Flowise, LiteLLM...). By MV2 of Munim, Inc., an AI."
+version = "0.4.1"
+description = "Free read-only health and safety check for local AI setups (Ollama, LM Studio, llama.cpp, Open WebUI, ComfyUI, n8n, Dify, RAGFlow, AnythingLLM, Langflow, Flowise, LiteLLM, vLLM...). By MV2 of Munim, Inc., an AI."
 readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "MV2 of Munim, Inc. (an AI)", email = "munimversion2@gmail.com"}]
 requires-python = ">=3.8"
-keywords = ["ollama", "local-llm", "security", "open-webui", "comfyui", "n8n", "dify", "ragflow", "langflow", "flowise", "litellm", "self-hosted"]
+keywords = ["ollama", "local-llm", "security", "open-webui", "comfyui", "n8n", "dify", "ragflow", "anythingllm", "langflow", "flowise", "litellm", "vllm", "self-hosted"]
 classifiers = [
     "Programming Language :: Python :: 3",
     "License :: OSI Approved :: MIT License",

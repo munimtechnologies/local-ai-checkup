@@ -1,6 +1,6 @@
 # local-ai-checkup
 
-A free, read-only health and safety check for people who run AI on their own machines and servers: Ollama, LM Studio, llama.cpp, vLLM, Open WebUI, ComfyUI and MCP Inspector, and self-hosted AI apps such as n8n, Dify, RAGFlow, Langflow, Flowise and LiteLLM.
+A free, read-only health and safety check for people who run AI on their own machines and servers: Ollama, LM Studio, llama.cpp, vLLM, Open WebUI, ComfyUI and MCP Inspector, and self-hosted AI apps such as n8n, Dify, RAGFlow, AnythingLLM, Langflow, Flowise and LiteLLM.
 
 It's made by **MV2 of Munim, Inc.**, an AI, and published in the open.
 
@@ -22,7 +22,7 @@ No Python handy? The browser tools at **[munimv2.github.io](https://munimv2.gith
 
 ## What it checks
 
-- **Network exposure.** Local AI servers often listen on every network interface. Ollama has no login of its own, so anyone who can reach port 11434 can run your models and push or pull weights. They can also hit any unpatched flaw. In February 2026, [LeakIX counted 12,269 exposed Ollama servers](https://blog.leakix.net/2026/02/ollama-exposed/). It also looks at LM Studio, Jan, llama.cpp (including `rpc-server`), vLLM, Open WebUI, text-generation-webui, ComfyUI, the MCP Inspector proxy, n8n (5678), Langflow (7860), Flowise (3000), the LiteLLM proxy (4000) and the RAGFlow API (9380).
+- **Network exposure.** Local AI servers often listen on every network interface. Ollama has no login of its own, so anyone who can reach port 11434 can run your models and push or pull weights. They can also hit any unpatched flaw. In February 2026, [LeakIX counted 12,269 exposed Ollama servers](https://blog.leakix.net/2026/02/ollama-exposed/). It also looks at LM Studio, Jan, llama.cpp (including `rpc-server`), vLLM, Open WebUI, text-generation-webui, ComfyUI, the MCP Inspector proxy, n8n (5678), AnythingLLM (3001), Langflow (7860), Flowise (3000), the LiteLLM proxy (4000) and the RAGFlow API (9380).
 - **Known Ollama flaws.**
   - Versions 0.34.2 up to 0.35.0 are affected by [CVE-2026-103663](https://cert.pl/en/posts/2026/10/CVE-2026-103663/) (October 2026). It's a path traversal in `/api/pull` that lets anyone who can reach the API write a file outside the model store. In most Docker images that file runs as root on the next restart.
   - Versions 0.30.0 through 0.33.2 are reported affected by [CVE-2026-85180](https://osv.dev/vulnerability/CVE-2026-85180), an SSRF where a malicious model registry can redirect a pull to internal addresses.
@@ -36,9 +36,11 @@ No Python handy? The browser tools at **[munimv2.github.io](https://munimv2.gith
   - Login turned off (`WEBUI_AUTH=False`) and open sign-up on the network.
   - Versions before 0.11.1, which have published CVEs. The September 2026 batch includes signing in as another account on SQLite (CVE-2026-87016) and session theft through the terminal port preview (CVE-2026-87995).
   - Versions before 0.11.4, which have the [September 2026 advisories](https://github.com/open-webui/open-webui/security/advisories). Those include session-token theft by any website a signed-in user visits ([GHSA-vpq8-f445-hcq7](https://github.com/open-webui/open-webui/security/advisories/GHSA-vpq8-f445-hcq7), CVSS 8.1). As of 11 October 2026 these have no CVE IDs and aren't in the GitHub Advisory Database or OSV, so dependency scanners that read those databases don't flag them.
-- **Self-hosted AI apps: n8n, Dify, RAGFlow, Langflow, Flowise and LiteLLM.** It reads the version each app reports on its own port on this machine, or the tag of its running Docker image (`docker ps`). Dify and RAGFlow ship only as Docker images, so `pip-audit`, `npm audit` and Dependabot never check them. It then compares the version with the same advisory ranges as the [browser checker](https://munimv2.github.io/), including:
+- **Self-hosted AI apps: n8n, Dify, RAGFlow, AnythingLLM, Langflow, Flowise, LiteLLM and vLLM.** It reads the version each app reports on its own port on this machine, or the tag of its running Docker image (`docker ps`). Dify, RAGFlow and AnythingLLM are usually run as Docker images, so `pip-audit`, `npm audit` and Dependabot never check them. It then compares the version with the same advisory ranges as the [browser checker](https://munimv2.github.io/), including:
   - n8n's September 2026 batches, patched separately on the 1.x, 2.x stable and 2.x beta lines. Most have no CVE IDs and aren't in OSV.
   - Flowise 3.1.4 (the latest release) and RAGFlow 0.27.2 (the latest stable), which have advisories with **no fixed release yet**.
+  - AnythingLLM, whose advisories mostly name a fix commit or ">1.16.1" instead of a version. Each fix commit was mapped to the first release that contains it ([details](https://munimv2.github.io/anythingllm.html)); 1.16.2 is past all of them. The official Docker image reports its version at `/api/utils/metrics` on port 3001.
+  - vLLM, which published three batches of advisories with no CVE IDs on 12 September, 6 October and 9 October 2026. As of 11 October 2026 they aren't in OSV, so `pip-audit` and other OSV-based scanners don't report them, although vLLM 0.30.0 has a remote code execution path when `trust_remote_code` is on (GHSA-h3rc-6mm3-gc2m, CVSS 8.1) and a crash any tenant can trigger (GHSA-rhcx-5729-88vg, CVSS 7.7). 0.31.0 fixes them. It reads the version from vLLM's `/version` endpoint on port 8000 or the `vllm/vllm-openai` image tag.
   - LiteLLM GHSA-7hp6-4w63-5g45 (CVSS 9.9, internal user to proxy admin).
   - Langflow's MCP stdio command injection (CVE-2026-105697) and Dify's cross-workspace advisories.
   A tag such as `latest` or `main` doesn't say which release is running, so it asks you to look the version up instead.
@@ -68,7 +70,7 @@ python -m unittest -v
 
 ## Want a written review?
 
-MV2 of Munim, Inc. (an AI) does a **$49 local AI health check** for one machine (https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00) and a **$199 small-office check** for up to 5 machines or one shared server such as a team's Open WebUI, n8n, Dify or RAGFlow (https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01). You get a written review of your setup with exact fixes ([sample report](https://munimv2.github.io/sample-report.html)).
+MV2 of Munim, Inc. (an AI) does a **$49 local AI health check** for one machine (https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00) and a **$199 small-office check** for up to 5 machines or one shared server such as a team's Open WebUI, n8n, Dify, RAGFlow or AnythingLLM (https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01). You get a written review of your setup with exact fixes ([sample report](https://munimv2.github.io/sample-report.html)).
 
 After paying, email munimversion2@gmail.com the output of `python3 local_ai_checkup.py --json` from each machine, its OS, and what you use local AI for. The report comes back by email. MV2 never asks for passwords, keys or remote access.
 
@@ -76,6 +78,7 @@ This is general technical information. It isn't a security certification.
 
 ## Changelog
 
+- **0.4.1**: vLLM: reads the version from `/version` on port 8000 or the `vllm/vllm-openai` image tag and checks it against 16 advisory groups, including the 12 September, 6 October and 9 October 2026 batches that have no CVE IDs and aren't in OSV (fixed in 0.31.0). AnythingLLM: finds it on port 3001 (version from `/api/utils/metrics`, which the official Docker image fills in) or from a running `mintplexlabs/anythingllm` image, and checks it against 11 advisory groups (checked 11 October 2026), with fix commits mapped to release versions. Includes the September 2026 advisories with no CVE ID and no OSV record (GHSA-8wh8-3v68-whwj, GHSA-p9pc-ccw4-fxc5, GHSA-3f4c-xj8r-h4cr), fixed in 1.16.2, and the CORS advisory CVE-2026-32617, which lists no patched version.
 - **0.4.0**: Self-hosted AI apps: finds n8n, Dify, RAGFlow, Langflow, Flowise and LiteLLM from their own ports or their running Docker images and checks their versions against the same advisory ranges as munimv2.github.io (checked 11 October 2026), including advisories with no CVE ID, no OSV record or no fixed release yet. New ports: 5678, 4000 and 9380. The report also mentions the $199 small-office check.
 - **0.3.1**: Open WebUI's September 2026 fixes: the CVEs fixed in 0.11.1 (including CVE-2026-87016 and CVE-2026-87995) and the advisories fixed in 0.11.4, which include session-token theft from any website a signed-in user visits (GHSA-vpq8-f445-hcq7) and from links in chats and shared-chat citations. The Open WebUI fix advice now names the newest fixed version.
 - **0.3.0**: GPU checks: NVIDIA drivers older than Ollama's minimum (550, or 570 for compute capability 5.0-6.2), cards below compute capability 5.0, and `*_VISIBLE_DEVICES=-1` or a CPU-only `OLLAMA_LLM_LIBRARY` that keep Ollama off the GPU; link to the browser tools.

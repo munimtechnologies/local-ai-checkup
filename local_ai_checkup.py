@@ -20,7 +20,7 @@ import sys
 import urllib.error
 import urllib.request
 
-__version__ = "0.4.0"
+__version__ = "0.4.1"
 
 PAID_CHECK_URL = "https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00"
 SMALL_OFFICE_URL = "https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01"
@@ -36,6 +36,7 @@ SERVICES = [
     ("llama.cpp server / LocalAI / Open WebUI", 8080),
     ("vLLM", 8000),
     ("Open WebUI / Flowise", 3000),
+    ("AnythingLLM", 3001),
     ("text-generation-webui / Langflow", 7860),
     ("ComfyUI", 8188),
     ("MCP Inspector proxy", 6277),
@@ -114,6 +115,8 @@ _N8N_SEP30 = ("30 September 2026 batch (15 advisories, 10 high, no CVE IDs, not 
               "through the MCP workflow validator, Git node code execution")
 _LITELLM_7HP6 = ("GHSA-7hp6-4w63-5g45 (CVSS 9.9, no CVE ID): any internal user can forge an admin session, become "
                  "proxy admin and run host commands; workaround EXPERIMENTAL_UI_LOGIN=false")
+# vLLM published three batches with no CVE IDs (12 September, 6 and 9 October 2026); as of 2026-10-11
+# GHSA-h3rc, GHSA-gx7p, GHSA-rhcx, GHSA-w9r6 and GHSA-p6g9 are not in OSV, so scanners don't flag them.
 APP_ADVISORIES = {
     "n8n": {"name": "n8n", "items": [
         ((0, 211, 0), (1, 120, 4), None, "CVE-2025-68613: signed-in users can run code on the server through "
@@ -177,6 +180,37 @@ APP_ADVISORIES = {
         ((0, 25, 2), None, (0, 27, 2), "GHSA-c6q8-23rp-32cv (no CVE ID, not in OSV): any signed-in user or API "
                                        "key holder who knows an agent's ID can run another user's private agent "
                                        "(CVSS 7.1); no fixed release yet"),
+    ]},
+    # AnythingLLM's advisories mostly give a fix commit or ">1.16.1" instead of a version; each fix commit
+    # was mapped to the first release tag that contains it. The Windows-only folder check bypass
+    # (CVE-2026-48789, fixed in 1.14.0) is left out because the Docker image runs on Linux.
+    "anythingllm": {"name": "AnythingLLM", "items": [
+        (None, (1, 10, 0), None, "CVE-2026-24477, CVE-2026-24478: stored provider API keys leak through "
+                                 "systemSettings.js (CVSS 8.7); path traversal (CVSS 7.2)"),
+        (None, None, (1, 11, 1), "CVE-2026-32617: permissive CORS policy (CVSS 7.1); the advisory lists no "
+                                 "patched version"),
+        (None, (1, 11, 2), None, "CVE-2026-32626, CVE-2026-32628: script injection from a streamed model "
+                                 "response, rated up to code execution (CVSS 9.6); SQL injection in the built-in "
+                                 "SQL agent (High)"),
+        (None, (1, 11, 2), None, "March 2026 batch (CVE-2026-32719, CVE-2026-32717, CVE-2026-32715 and others): "
+                                 "Zip Slip in Community Hub plugin import; suspended users keep using "
+                                 "browser-extension API keys; managers reach admin-only settings"),
+        (None, (1, 12, 1), None, "CVE-2026-41318: stored XSS in chart captions through prompt-injected model output"),
+        (None, (1, 13, 0), None, "CVE-2026-48116: anyone who can chat with an agent can run commands in the "
+                                 "container through the filesystem-search-files skill, on by default in the "
+                                 "official Docker image (High)"),
+        (None, (1, 13, 0), None, "CVE-2026-42456, CVE-2026-45403, CVE-2026-47713: other users' text-to-speech "
+                                 "audio by chat ID; file copy follows symlinks; old mobile device tokens skip "
+                                 "workspace scoping"),
+        ((1, 0, 0), (1, 16, 0), None, "CVE-2026-72917: password recovery accepts one recovery code twice "
+                                      "(CVSS 5.9)"),
+        (None, (1, 16, 2), None, "CVE-2026-88055: stored XSS through server-side HTML in MetaGenerator (CVSS 5.5)"),
+        ((1, 13, 0), (1, 16, 2), None, "GHSA-8wh8-3v68-whwj, GHSA-p9pc-ccw4-fxc5 (no CVE IDs, not in OSV): "
+                                       "anonymous visitors of an embedded chat widget receive the owner's "
+                                       "private Memories; memory extraction can overwrite another user's "
+                                       "workspace memory"),
+        ((1, 16, 1), (1, 16, 2), None, "GHSA-3f4c-xj8r-h4cr (no CVE ID, not in OSV): a manager can read and "
+                                       "write files outside storage/documents"),
     ]},
     "flowise": {"name": "Flowise", "items": [
         (None, (3, 0, 6), None, "CVE-2025-58434: the forgot-password endpoint returns a valid reset token, so "
@@ -247,6 +281,46 @@ APP_ADVISORIES = {
         ((1, 102, 0), (1, 102, 2), None, _LITELLM_7HP6),
         ((1, 103, 0), (1, 103, 1), None, _LITELLM_7HP6),
     ]},
+    "vllm": {"name": "vLLM", "items": [
+        ((0, 6, 5), (0, 8, 5), None, "CVE-2025-47277, CVE-2025-32444, CVE-2025-29783: only with distributed KV-cache "
+                                     "transfer (PyNcclPipe on the V0 engine, or Mooncake), data from sockets on every "
+                                     "interface is unpickled, allowing remote code execution (Critical)"),
+        (None, (0, 11, 1), None, "CVE-2025-66448, CVE-2025-62164, CVE-2025-62372: a malicious model config runs its "
+                                 "code even with trust_remote_code=False; prompt embeds can corrupt memory; malformed "
+                                 "multimodal embeddings crash the server"),
+        ((0, 10, 2), (0, 13, 0), None, "CVE-2026-56340: only with --enable-prompt-embeds, the CVE-2025-62164 fix was "
+                                       "incomplete"),
+        ((0, 10, 1), (0, 14, 0), None, "CVE-2026-22807: model code named in auto_map loads at startup without a "
+                                       "trust_remote_code check (High)"),
+        ((0, 8, 3), (0, 14, 1), None, "CVE-2026-22778: when serving a video model, a crafted video URL can lead to "
+                                      "remote code execution (Critical)"),
+        (None, (0, 14, 1), None, "CVE-2026-24779: SSRF past the media URL domain allowlist"),
+        ((0, 10, 1), (0, 18, 0), None, "CVE-2026-27893: nemotron_vl and kimi_k25 model code hard-code "
+                                       "trust_remote_code=True (High)"),
+        ((0, 11, 1), (0, 18, 0), None, "GHSA-8c65-hq7q-r7jm (no CVE ID): remote denial of service through "
+                                       "allowed_token_ids with speculative decoding (CVSS 7.5)"),
+        ((0, 8, 0), (0, 19, 0), None, "CVE-2026-5497: no frame limit for video/jpeg data URLs, so one "
+                                      "unauthenticated request can exhaust memory"),
+        ((0, 3, 0), (0, 22, 0), None, "CVE-2026-48746: the API key check is skipped with a crafted Host header when "
+                                      "vLLM is reached directly, not behind a proxy such as nginx (Critical)"),
+        (None, (0, 24, 0), None, "CVE-2026-55574, CVE-2026-54234 and 9 October 2026 advisories without CVE IDs: "
+                                 "regex denial of service in structured outputs, engine crashes, SSRF through "
+                                 "X-Request-Id leaking KV-cache tensors on P2pNcclConnector setups"),
+        (None, (0, 28, 0), None, "CVE-2026-93592 and others: a negative token ID sent to /v1/embeddings or /pooling "
+                                 "crashes the engine (CVSS 7.5)"),
+        (None, (0, 29, 0), None, "12 September and 9 October 2026 advisories (mostly no CVE IDs): out-of-range "
+                                 "stop_token_ids crash the engine or write out of bounds on the GPU, prompt length "
+                                 "checks skipped in disaggregated serving, scheduler stalls"),
+        (None, (0, 30, 0), None, "September 2026 batch: structured-output errors crash the shared engine, video "
+                                 "sampling exhausts CPU and memory, remote media downloaded in full before size "
+                                 "limits apply (GHSA-p6g9-7v3x-m8mv, not in OSV)"),
+        ((0, 7, 3), (0, 31, 0), None, "GHSA-h3rc-6mm3-gc2m (no CVE ID, not in OSV): only with trust_remote_code on "
+                                      "and a multimodal model whose processor loads remote code, a request can pick "
+                                      "the code revision to load, leading to remote code execution (CVSS 8.1)"),
+        (None, (0, 31, 0), None, "6 and 9 October 2026 batches (no CVE IDs, not in OSV): per-request processor "
+                                 "arguments exhaust memory with many multimodal models (CVSS 7.5), prompt_logprobs "
+                                 "crashes the server for every tenant (CVSS 7.7), cache aliasing between requests"),
+    ]},
 }
 
 # Docker image name (registry and tag removed) -> APP_ADVISORIES key.
@@ -255,12 +329,14 @@ IMAGE_PRODUCTS = {
     "langgenius/dify-api": "dify",
     "langgenius/dify-web": "dify",
     "infiniflow/ragflow": "ragflow",
+    "mintplexlabs/anythingllm": "anythingllm",
     "flowiseai/flowise": "flowise",
     "langflowai/langflow": "langflow",
     "langflowai/langflow-backend": "langflow",
     "berriai/litellm": "litellm",
     "berriai/litellm-database": "litellm",
     "berriai/litellm-non_root": "litellm",
+    "vllm/vllm-openai": "vllm",
 }
 
 
@@ -269,14 +345,22 @@ def _n8n_version(j):
     return data.get("versionCli") if isinstance(data, dict) else None
 
 
+def _anythingllm_version(j):
+    # /api/utils/metrics needs no login. appVersion is DEPLOYMENT_VERSION, which the official Docker
+    # image sets; other installs may report null, and then the version can't be read.
+    return j.get("appVersion") if "vectorDB" in j and "online" in j else None
+
+
 # APP_ADVISORIES key -> (port, path, function that returns the version from the JSON reply or None).
 # The checks are strict so another program on the same port is not mistaken for the app.
 APP_ENDPOINTS = {
     "n8n": (5678, "/rest/settings", _n8n_version),
+    "anythingllm": (3001, "/api/utils/metrics", _anythingllm_version),
     "langflow": (7860, "/api/v1/version",
                  lambda j: j.get("version") if "main_version" in j or "package" in j else None),
     "flowise": (3000, "/api/v1/version", lambda j: j.get("version") if set(j) == {"version"} else None),
     "litellm": (4000, "/health/readiness", lambda j: j.get("litellm_version")),
+    "vllm": (8000, "/version", lambda j: j.get("version") if set(j) == {"version"} else None),
 }
 
 # Ollama's NVIDIA requirements, from https://docs.ollama.com/gpu (October 2026):
@@ -290,7 +374,7 @@ FORCE_CPU_VARS = ("CUDA_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES", "ROCR_VISIBLE_D
 SETTINGS_KEYS = ("OLLAMA_HOST", "OLLAMA_ORIGINS", "OLLAMA_LLM_LIBRARY") + FORCE_CPU_VARS
 
 AI_IMAGE_HINT = re.compile(r"ollama|open-?webui|comfy|vllm|llama|localai|text-generation|lmstudio|tgi|"
-                           r"n8n|flowise|langflow|litellm|dify|ragflow", re.I)
+                           r"n8n|flowise|langflow|litellm|dify|ragflow|anythingllm", re.I)
 
 GB = 1024 ** 3
 _opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -733,6 +817,11 @@ def identify(host, port):
         s = get_json(f"http://{host}:{port}/system_stats")
         if isinstance(s, dict) and "system" in s:
             return "ComfyUI"
+    if port == 3001:
+        # Identified even when it reports no version (appVersion is null outside the Docker image).
+        mt = get_json(f"http://{host}:{port}/api/utils/metrics")
+        if isinstance(mt, dict) and "vectorDB" in mt and "online" in mt:
+            return "AnythingLLM"
     for key, (app_port, _, _) in APP_ENDPOINTS.items():
         if port == app_port and app_version_from_port(host, key):
             return APP_ADVISORIES[key]["name"]
@@ -770,6 +859,9 @@ def check_exposure(rep):
                 detail += " The llama.cpp RPC server has no authentication and is meant only for trusted networks."
             elif port == 4000:
                 detail += " A LiteLLM proxy holds the API keys of every model provider it routes to."
+            elif port == 3001:
+                detail += (" AnythingLLM in single-user mode has no password unless you set one in its "
+                           "Security settings, and its agents can read files and run tools.")
             rep.add("risk" if ident or port in (6277, 50052) else "warn",
                     f"{label} is reachable on your network address", detail,
                     "Bind it to 127.0.0.1 (for Ollama: OLLAMA_HOST=127.0.0.1), or keep it on the network only "
@@ -849,8 +941,9 @@ def report_app(rep, key, app):
 
 
 def check_apps(rep, ports):
-    """n8n, Dify, RAGFlow, Langflow, Flowise and LiteLLM: version from the app's own port, or from the
-    tag of its running Docker image (Dify and RAGFlow only ship as images, so package scanners miss them)."""
+    """n8n, Dify, RAGFlow, AnythingLLM, Langflow, Flowise, LiteLLM and vLLM: version from the app's own port,
+    or from the tag of its running Docker image (Dify and RAGFlow only ship as images, so package scanners
+    miss them)."""
     found = {}
     for key, (port, _, _) in APP_ENDPOINTS.items():
         info = ports.get(port)
