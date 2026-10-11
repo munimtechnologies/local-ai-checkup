@@ -109,6 +109,87 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(lac.parse_rocm(None, None), [])
 
 
+class AppTests(unittest.TestCase):
+    def test_parse_image(self):
+        self.assertEqual(lac.parse_image("docker.n8n.io/n8nio/n8n:2.40.0"), ("n8nio/n8n", "2.40.0"))
+        self.assertEqual(lac.parse_image("ghcr.io/berriai/litellm:main-v1.82.7"), ("berriai/litellm", "main-v1.82.7"))
+        self.assertEqual(lac.parse_image("infiniflow/ragflow:v0.27.2"), ("infiniflow/ragflow", "v0.27.2"))
+        self.assertEqual(lac.parse_image("localhost:5000/flowiseai/flowise"), ("flowiseai/flowise", ""))
+        self.assertEqual(lac.parse_image("n8nio/n8n@sha256:abc123"), ("n8nio/n8n", ""))
+        self.assertEqual(lac.parse_image("ollama/ollama"), ("ollama/ollama", ""))
+        self.assertEqual(lac.parse_image(None), ("", ""))
+
+    def test_parse_docker_images(self):
+        text = ("docker.n8n.io/n8nio/n8n:2.40.0\n"
+                "langgenius/dify-api:1.13.3\n"
+                "langgenius/dify-web:1.13.3\n"
+                "infiniflow/ragflow:v0.27.2\n"
+                "ghcr.io/berriai/litellm:main-latest\n"
+                "postgres:15\n"
+                "nginx:latest\n")
+        found = lac.parse_docker_images(text)
+        self.assertEqual(sorted(found), ["dify", "litellm", "n8n", "ragflow"])
+        self.assertEqual(found["n8n"], ((2, 40, 0), "docker.n8n.io/n8nio/n8n:2.40.0"))
+        self.assertEqual(found["dify"], ((1, 13, 3), "langgenius/dify-api:1.13.3"))
+        self.assertEqual(found["ragflow"][0], (0, 27, 2))
+        self.assertIsNone(found["litellm"][0])
+        self.assertEqual(lac.parse_docker_images(None), {})
+        self.assertEqual(lac.parse_docker_images("Cannot connect to the Docker daemon"), {})
+
+    def test_app_flaws_match_the_site_checker(self):
+        # Same answers as munimv2.github.io and the Apify Actor give for these versions.
+        flaws, upgrade, unfixed = lac.app_flaws("n8n", (2, 40, 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (2, (2, 41, 4), 0))
+        self.assertEqual(lac.app_flaws("n8n", (2, 41, 4))[0], [])
+        self.assertEqual(lac.app_flaws("n8n", (2, 42, 0))[1], (2, 42, 1))
+        self.assertEqual(lac.app_flaws("n8n", (1, 123, 80))[1], (1, 123, 83))
+        flaws, upgrade, unfixed = lac.app_flaws("dify", (1, 13, 3))
+        self.assertEqual((len(flaws), upgrade, unfixed), (3, (1, 16, 0), 0))
+        flaws, upgrade, unfixed = lac.app_flaws("flowise", (3, 1, 4))
+        self.assertEqual((len(flaws), upgrade, unfixed), (2, None, 2))
+        flaws, upgrade, unfixed = lac.app_flaws("ragflow", (0, 27, 2))
+        self.assertEqual((len(flaws), upgrade, unfixed), (1, None, 1))
+        self.assertIn("GHSA-c6q8-23rp-32cv", flaws[0])
+        self.assertEqual(lac.app_flaws("ragflow", (0, 24, 0))[:2], ([lac.APP_ADVISORIES["ragflow"]["items"][6][3]], (0, 25, 0)))
+        self.assertEqual(lac.app_flaws("ragflow", (0, 25, 1))[0], [])
+        flaws, upgrade, unfixed = lac.app_flaws("litellm", (1, 96, 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (1, (1, 100, 4), 0))
+        flaws, upgrade, unfixed = lac.app_flaws("litellm", (1, 82, 7))
+        self.assertEqual((len(flaws), upgrade, unfixed), (9, (1, 95, 0), 1))
+        self.assertEqual(lac.app_flaws("litellm", (1, 101, 3))[0], [])
+        flaws, upgrade, unfixed = lac.app_flaws("langflow", (1, 10, 2))
+        self.assertEqual((len(flaws), upgrade, unfixed), (4, (1, 12, 0), 0))
+        self.assertEqual(lac.app_flaws("langflow", (1, 12, 0))[0], [])
+
+    def test_app_endpoint_fields_are_strict(self):
+        n8n, langflow, flowise, litellm = (lac.APP_ENDPOINTS[k][2] for k in ("n8n", "langflow", "flowise", "litellm"))
+        self.assertEqual(n8n({"data": {"versionCli": "2.40.0"}}), "2.40.0")
+        self.assertIsNone(n8n({"data": []}))
+        self.assertIsNone(n8n({"status": "ok"}))
+        self.assertEqual(langflow({"version": "1.10.2", "main_version": "1.10.2", "package": "Langflow"}), "1.10.2")
+        self.assertIsNone(langflow({"version": "1.0.0"}))
+        self.assertEqual(flowise({"version": "3.1.4"}), "3.1.4")
+        self.assertIsNone(flowise({"version": "3.1.4", "name": "something else"}))
+        self.assertEqual(litellm({"status": "healthy", "litellm_version": "1.96.0"}), "1.96.0")
+        self.assertIsNone(litellm({"status": "healthy"}))
+
+    def test_report_app(self):
+        rep = lac.Report()
+        lac.report_app(rep, "flowise", {"version": (3, 1, 4), "source": "Docker image flowiseai/flowise:3.1.4",
+                                        "lan": False})
+        lac.report_app(rep, "n8n", {"version": (2, 40, 0), "source": "port 5678", "lan": True})
+        lac.report_app(rep, "dify", {"version": None, "source": "Docker image langgenius/dify-api:latest",
+                                     "lan": False})
+        lac.report_app(rep, "langflow", {"version": (1, 12, 0), "source": "port 7860", "lan": False})
+        levels = [f["level"] for f in rep.findings]
+        self.assertEqual(levels, ["warn", "risk", "info", "ok"])
+        self.assertIn("2 of these list no fixed release yet", rep.findings[0]["fix"])
+        self.assertIn("flowise.html", rep.findings[0]["fix"])
+        self.assertIn("2.41.4", rep.findings[1]["fix"])
+        self.assertEqual(rep.facts["apps"]["n8n"], {"version": "2.40.0", "source": "port 5678", "advisories": 2})
+        self.assertIsNone(rep.facts["apps"]["dify"]["version"])
+
+
 class GpuTests(unittest.TestCase):
     def test_parse_compute_cap(self):
         self.assertEqual(lac.parse_compute_cap("6.1"), (6, 1))

@@ -20,9 +20,10 @@ import sys
 import urllib.error
 import urllib.request
 
-__version__ = "0.3.1"
+__version__ = "0.4.0"
 
 PAID_CHECK_URL = "https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00"
+SMALL_OFFICE_URL = "https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01"
 HARDENING_URL = "https://github.com/munimv2/local-ai-checkup/blob/main/HARDENING.md"
 SITE_URL = "https://munimv2.github.io/"
 
@@ -34,11 +35,14 @@ SERVICES = [
     ("Jan", 1337),
     ("llama.cpp server / LocalAI / Open WebUI", 8080),
     ("vLLM", 8000),
-    ("Open WebUI", 3000),
-    ("text-generation-webui", 7860),
+    ("Open WebUI / Flowise", 3000),
+    ("text-generation-webui / Langflow", 7860),
     ("ComfyUI", 8188),
     ("MCP Inspector proxy", 6277),
     ("llama.cpp rpc-server", 50052),
+    ("n8n", 5678),
+    ("LiteLLM proxy", 4000),
+    ("RAGFlow API", 9380),
 ]
 
 # (fixed_in, description). Versions below fixed_in are affected.
@@ -94,6 +98,187 @@ COMFYUI_ADVISORIES = [
                  "CVE-2026-56670)"),
 ]
 
+# Self-hosted AI apps. Each item is (first_affected or None, fixed_in or None, last_affected or None,
+# description), the same ranges as the checker at munimv2.github.io (checked 2026-10-11). Advisories
+# with no fixed release name the last affected version instead. Several release lines are patched
+# separately (n8n 1.x and 2.x, LiteLLM), so a range can start after 2.0.0.
+_N8N_JULY = ("July 2026 batch: expression sandbox escape to command execution (CVSS 8.7), code execution in "
+             "the Git node, file read and SSRF through the Send Email node")
+_N8N_SEP10 = ("10 September 2026 batch (17 advisories): expression sandbox escapes (CVSS 8.7), unauthenticated "
+              "storage exhaustion through OAuth client registration, SSRF through the OpenAI model-search endpoint")
+_N8N_SEP16 = ("16 September 2026 batch (at least 12 advisories, no CVE IDs, not in OSV): session token leak "
+              "through the Dynamic Credentials authorize endpoint (CVSS 8.5), inline Agent tools that decrypt "
+              "any credential, path traversal, unauthenticated chat-memory NoSQL injection")
+_N8N_SEP30 = ("30 September 2026 batch (15 advisories, 10 high, no CVE IDs, not in OSV): unauthenticated OAuth "
+              "client persistence, unauthenticated approval of waiting executions, owner account takeover "
+              "through the MCP workflow validator, Git node code execution")
+_LITELLM_7HP6 = ("GHSA-7hp6-4w63-5g45 (CVSS 9.9, no CVE ID): any internal user can forge an admin session, become "
+                 "proxy admin and run host commands; workaround EXPERIMENTAL_UI_LOGIN=false")
+APP_ADVISORIES = {
+    "n8n": {"name": "n8n", "items": [
+        ((0, 211, 0), (1, 120, 4), None, "CVE-2025-68613: signed-in users can run code on the server through "
+                                         "workflow expressions (Critical)"),
+        ((1, 121, 0), (1, 121, 1), None, "CVE-2025-68613: signed-in users can run code on the server through "
+                                         "workflow expressions (Critical)"),
+        ((1, 65, 0), (1, 121, 0), None, "CVE-2026-21858 (\"Ni8mare\"): unauthenticated file access through form "
+                                        "and webhook handling, which can lead to full takeover (CVSS 10)"),
+        (None, (1, 123, 67), None, "July 2026 batch (1.x): code execution in the Git node, file read and SSRF "
+                                   "through the Send Email node"),
+        ((2, 0, 0), (2, 31, 5), None, _N8N_JULY),
+        ((2, 32, 0), (2, 32, 1), None, _N8N_JULY),
+        (None, (1, 123, 76), None, "10 September 2026 batch (1.x): expression sandbox escapes (CVSS 8.7), SSRF "
+                                   "through the OpenAI model-search endpoint"),
+        ((2, 0, 0), (2, 37, 7), None, _N8N_SEP10),
+        ((2, 38, 0), (2, 38, 2), None, _N8N_SEP10),
+        (None, (1, 123, 80), None, "16 September 2026 batch (1.x, no CVE IDs, not in OSV): path traversal that "
+                                   "redirects public API calls (CVSS 8.1), unauthenticated NoSQL injection in the "
+                                   "MongoDB Chat Memory node"),
+        ((2, 0, 0), (2, 39, 6), None, _N8N_SEP16),
+        ((2, 40, 0), (2, 40, 1), None, _N8N_SEP16),
+        (None, (1, 123, 83), None, "30 September 2026 batch (1.x, no CVE IDs, not in OSV): Git node code "
+                                   "execution, unauthenticated cross-project workflow execution through webhook "
+                                   "paths, stored XSS in the hosted chat page"),
+        ((2, 0, 0), (2, 41, 4), None, _N8N_SEP30),
+        ((2, 42, 0), (2, 42, 1), None, _N8N_SEP30),
+    ]},
+    "dify": {"name": "Dify", "items": [
+        (None, (1, 9, 0), None, "CVE-2025-59422 and others: signed-in users can read other people's chats; XSS "
+                                "in the MCP OAuth flow"),
+        (None, (1, 11, 0), None, "CVE-2025-67732: the model provider configuration endpoint returns API keys in "
+                                 "plain text (High)"),
+        (None, (1, 11, 2), None, "CVE-2026-21866: stored XSS in chat"),
+        (None, None, (1, 11, 4), "CVE-2026-26023: DOM and stored XSS in the web chat app through echarts "
+                                 "content (High); the advisory lists no patched version"),
+        (None, (1, 13, 0), None, "CVE-2026-105762: unauthenticated server-side request forgery through "
+                                 "/console/api/remote-files/upload (High)"),
+        (None, (1, 13, 1), None, "CVE-2026-34082, CVE-2026-42138: users can delete other people's "
+                                 "conversations; stored XSS through SVG uploads"),
+        (None, (1, 14, 0), None, "GHSA-5vmp-5q9h-hmr7, GHSA-fj5w-7rc8-3f3f (no CVE IDs, not in OSV): another "
+                                 "workspace's External API details can be read and its usage enumerated"),
+        (None, (1, 14, 2), None, "GHSA-9c9q-5rj5-mjj2 (no CVE ID, not in OSV): any console user who knows a file "
+                                 "ID can read another workspace's uploaded documents (CVSS 7.7)"),
+        (None, (1, 16, 0), None, "CVE-2026-105761: any workspace member can change or disable another app's MCP "
+                                 "server (CVSS 7.1)"),
+    ]},
+    "ragflow": {"name": "RAGFlow", "items": [
+        (None, (0, 14, 0), None, "CVE-2024-12433: hard-coded RPC key and pickle deserialization, remote code "
+                                 "execution (Critical)"),
+        (None, (0, 14, 1), None, "CVE-2025-25282: insecure direct object reference (High)"),
+        (None, None, (0, 15, 1), "CVE-2025-27135: SQL injection in the agent ExeSQL component; the advisory "
+                                 "lists no patched version"),
+        (None, (0, 22, 0), None, "CVE-2025-69286: anyone with a shared assistant or agent link could derive the "
+                                 "owner's API key (Critical)"),
+        (None, (0, 23, 0), None, "CVE-2025-68700: signed-in users can run commands through the Canvas CodeExec "
+                                 "component (High)"),
+        (None, (0, 24, 0), None, "CVE-2026-24770: Zip Slip in the MinerU parser (CVSS 9.8; only if you use "
+                                 "MinerU parsing)"),
+        (None, (0, 25, 0), None, "CVE-2026-45312, CVE-2026-28797: any signed-in user can run OS commands through "
+                                 "Jinja2 templates (CVSS 9.9), and sign-up is open by default"),
+        ((0, 25, 2), None, (0, 27, 2), "GHSA-c6q8-23rp-32cv (no CVE ID, not in OSV): any signed-in user or API "
+                                       "key holder who knows an agent's ID can run another user's private agent "
+                                       "(CVSS 7.1); no fixed release yet"),
+    ]},
+    "flowise": {"name": "Flowise", "items": [
+        (None, (3, 0, 6), None, "CVE-2025-58434: the forgot-password endpoint returns a valid reset token, so "
+                                "anyone who knows an account's email can take it over"),
+        ((3, 0, 5), (3, 0, 6), None, "CVE-2025-59528: the CustomMCP node runs attacker-supplied JavaScript "
+                                     "(Critical)"),
+        (None, (3, 1, 3), None, "CVE-2026-70478 and others: an unauthenticated OAuth2 token refresh endpoint "
+                                "returns connected accounts' access tokens (CVSS 9.2); sandbox escapes; "
+                                "cross-workspace credential access"),
+        (None, (3, 1, 4), None, "31 August 2026 batch: SSRF and LLM API key theft through a user-set base URL in "
+                                "chat-model nodes (Critical); code execution through the SQL Database Chain node"),
+        (None, None, (3, 1, 4), "GHSA-cffm-583c-vffr, GHSA-vf3j-89vf-r697: with Enterprise SSO, users are "
+                                "matched by email alone, so accounts can be taken over (CVSS 9.2); no fixed "
+                                "release yet"),
+        (None, None, (3, 1, 4), "GHSA-27w2-26m5-x82c and 3 more (no CVE IDs): missing authorization lets signed-in "
+                                "users and low-privileged API keys reach other workspaces' credentials, chat and "
+                                "upsert history, and the /admin/queues dashboard; no fixed release yet"),
+    ]},
+    "langflow": {"name": "Langflow", "items": [
+        (None, (1, 3, 0), None, "CVE-2025-3248: unauthenticated code execution through /api/v1/validate/code "
+                                "(CVSS 9.8, exploited in the wild)"),
+        (None, (1, 9, 0), None, "CVE-2026-33017 and others: unauthenticated code execution through the public "
+                                "flow build endpoint; Knowledge Bases path traversal; shell commands through MCP "
+                                "Stdio servers"),
+        ((1, 7, 0), (1, 9, 1), None, "CVE-2026-8505: webhook authentication bypass lets anyone run flows "
+                                     "(Critical)"),
+        ((1, 6, 8), (1, 9, 1), None, "CVE-2026-105699: MCP resource handlers disclose files from other users' "
+                                     "projects (High)"),
+        (None, (1, 9, 2), None, "CVE-2026-48519, CVE-2026-55447: code execution through Shareable Playgrounds "
+                                "(CVSS 9.6); file read through symlinks"),
+        (None, (1, 10, 1), None, "CVE-2026-10561, CVE-2026-9205, GHSA-gh98-4phw-6fmw: unsandboxed Python REPL "
+                                 "component; weak encryption key from a short SECRET_KEY; deprecated build "
+                                 "endpoints run other users' flows"),
+        ((1, 7, 2), (1, 10, 1), None, "CVE-2026-51886: validate_code() ran submitted function definitions with "
+                                      "exec() (High)"),
+        ((1, 1, 2), (1, 10, 3), None, "CVE-2026-105697: OS command injection through MCP stdio server settings "
+                                      "(CVSS 9.9); with the default LANGFLOW_AUTO_LOGIN=true anyone who can "
+                                      "reach Langflow can use it"),
+        (None, (1, 10, 3), None, "GHSA-j8f7-x8jm-wmm4: SSRF protection in URL-taking components was off or "
+                                 "warn-only by default"),
+        ((1, 3, 0), (1, 10, 3), None, "CVE-2026-7700: prompt injection in the Smart Transform component leads to "
+                                      "code execution (High); from 1.5.0 also CVE-2026-105741, X-Forwarded-For "
+                                      "spoofing"),
+        ((1, 0, 16), (1, 12, 0), None, "GHSA-33p4-w7j3-33mw: unsafe eval() on Tool-Mode input options (Low)"),
+    ]},
+    "litellm": {"name": "LiteLLM", "items": [
+        (None, (1, 61, 15), None, "CVE-2025-0628: a user can become proxy admin (High)"),
+        ((1, 82, 7), None, (1, 82, 8), "GHSA-5mg7-485q-xm76: the 1.82.7 and 1.82.8 releases on PyPI were "
+                                       "malicious and harvested credentials; remove them and rotate every key "
+                                       "that environment could see"),
+        (None, (1, 83, 0), None, "CVE-2026-35030, CVE-2026-35029: OIDC authentication bypass (Critical); "
+                                 "privilege escalation through the config endpoint"),
+        (None, (1, 83, 7), None, "CVE-2026-37004: template injection in /prompts/test (Critical), plus on most "
+                                 "versions SQL injection in the API key check and MCP stdio command execution"),
+        (None, (1, 83, 10), None, "CVE-2026-47102, CVE-2026-59823: users can change their own role; SSRF "
+                                  "through user_config"),
+        (None, (1, 83, 14), None, "CVE-2026-47101: internal users can create keys for routes they aren't "
+                                  "allowed to use (High)"),
+        (None, (1, 84, 0), None, "CVE-2026-49468, CVE-2026-59822: a crafted Host header gets past the proxy's "
+                                 "authentication (CVSS 9.8); MCP auth bypass"),
+        ((1, 65, 5), (1, 85, 0), None, "GHSA-hhww-mrg2-969h: reflected XSS in /sso/debug/callback"),
+        (None, (1, 94, 0), None, "CVE-2026-84377: signed-in users can redirect provider calls and leak stored "
+                                 "provider keys (backport fixes in 1.88.6-1.93.2)"),
+        (None, (1, 95, 0), None, "GHSA-g5ff-637f-6q2m (no CVE ID, not in OSV): the internal_user_viewer role can "
+                                 "read any file the proxy can, such as the master key (CVSS 8.1)"),
+        ((1, 91, 0), (1, 100, 4), None, _LITELLM_7HP6),
+        ((1, 101, 0), (1, 101, 3), None, _LITELLM_7HP6),
+        ((1, 102, 0), (1, 102, 2), None, _LITELLM_7HP6),
+        ((1, 103, 0), (1, 103, 1), None, _LITELLM_7HP6),
+    ]},
+}
+
+# Docker image name (registry and tag removed) -> APP_ADVISORIES key.
+IMAGE_PRODUCTS = {
+    "n8nio/n8n": "n8n",
+    "langgenius/dify-api": "dify",
+    "langgenius/dify-web": "dify",
+    "infiniflow/ragflow": "ragflow",
+    "flowiseai/flowise": "flowise",
+    "langflowai/langflow": "langflow",
+    "langflowai/langflow-backend": "langflow",
+    "berriai/litellm": "litellm",
+    "berriai/litellm-database": "litellm",
+    "berriai/litellm-non_root": "litellm",
+}
+
+
+def _n8n_version(j):
+    data = j.get("data")
+    return data.get("versionCli") if isinstance(data, dict) else None
+
+
+# APP_ADVISORIES key -> (port, path, function that returns the version from the JSON reply or None).
+# The checks are strict so another program on the same port is not mistaken for the app.
+APP_ENDPOINTS = {
+    "n8n": (5678, "/rest/settings", _n8n_version),
+    "langflow": (7860, "/api/v1/version",
+                 lambda j: j.get("version") if "main_version" in j or "package" in j else None),
+    "flowise": (3000, "/api/v1/version", lambda j: j.get("version") if set(j) == {"version"} else None),
+    "litellm": (4000, "/health/readiness", lambda j: j.get("litellm_version")),
+}
+
 # Ollama's NVIDIA requirements, from https://docs.ollama.com/gpu (October 2026):
 # compute capability 5.0+ with driver 550+, and driver 570+ for compute capability 5.0-6.2.
 OLLAMA_GPU_DOCS = "https://docs.ollama.com/gpu"
@@ -104,7 +289,8 @@ OLLAMA_MIN_DRIVER_OLD_CARDS = 570
 FORCE_CPU_VARS = ("CUDA_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES", "ROCR_VISIBLE_DEVICES", "GGML_VK_VISIBLE_DEVICES")
 SETTINGS_KEYS = ("OLLAMA_HOST", "OLLAMA_ORIGINS", "OLLAMA_LLM_LIBRARY") + FORCE_CPU_VARS
 
-AI_IMAGE_HINT = re.compile(r"ollama|open-?webui|comfy|vllm|llama|localai|text-generation|lmstudio|tgi", re.I)
+AI_IMAGE_HINT = re.compile(r"ollama|open-?webui|comfy|vllm|llama|localai|text-generation|lmstudio|tgi|"
+                           r"n8n|flowise|langflow|litellm|dify|ragflow", re.I)
 
 GB = 1024 ** 3
 _opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
@@ -178,6 +364,50 @@ def advisories_for(version, table):
 def newest_fix(table):
     """The lowest version that is past every advisory in a (fixed_in, description) table."""
     return max(fixed for fixed, _ in table)
+
+
+def app_flaws(key, version):
+    """(descriptions, version to update to or None, how many list no fixed release) for an app version."""
+    flaws, upgrade, unfixed = [], None, 0
+    for first, fixed, last, desc in APP_ADVISORIES[key]["items"]:
+        if first and version < first:
+            continue
+        if fixed and version >= fixed:
+            continue
+        if last and version > last:
+            continue
+        flaws.append(desc)
+        if fixed and (upgrade is None or fixed > upgrade):
+            upgrade = fixed
+        if not fixed:
+            unfixed += 1
+    return flaws, upgrade, unfixed
+
+
+def parse_image(image):
+    """'docker.n8n.io/n8nio/n8n:2.40.0' -> ('n8nio/n8n', '2.40.0'). The tag is '' when there is none."""
+    s = str(image or "").strip().split("@", 1)[0]
+    name, tag = s, ""
+    if ":" in s.rsplit("/", 1)[-1]:
+        name, tag = s.rsplit(":", 1)
+    parts = name.lower().split("/")
+    if len(parts) > 1 and ("." in parts[0] or ":" in parts[0] or parts[0] == "localhost"):
+        parts = parts[1:]
+    return "/".join(parts), tag
+
+
+def parse_docker_images(text):
+    """{app key: (version or None, image)} from `docker ps --format {{.Image}}` output."""
+    found = {}
+    for line in (text or "").splitlines():
+        name, tag = parse_image(line)
+        key = IMAGE_PRODUCTS.get(name)
+        if not key:
+            continue
+        version = parse_version(tag)
+        if key not in found or (version and not found[key][0]):
+            found[key] = (version, line.strip())
+    return found
 
 
 def ollama_flaws(version, system):
@@ -482,6 +712,13 @@ def check_ollama(rep, budget):
                     "Free space or set OLLAMA_MODELS to a larger drive.")
 
 
+def app_version_from_port(host, key):
+    """Version string the app reports on its own port, or None if it isn't that app."""
+    port, path, field = APP_ENDPOINTS[key]
+    j = get_json(f"http://{host}:{port}{path}")
+    return field(j) if isinstance(j, dict) else None
+
+
 def identify(host, port):
     """Best-effort name of the AI service on host:port, or None."""
     if port == 11434:
@@ -496,6 +733,9 @@ def identify(host, port):
         s = get_json(f"http://{host}:{port}/system_stats")
         if isinstance(s, dict) and "system" in s:
             return "ComfyUI"
+    for key, (app_port, _, _) in APP_ENDPOINTS.items():
+        if port == app_port and app_version_from_port(host, key):
+            return APP_ADVISORIES[key]["name"]
     if port in (1234, 1337, 8080, 8000):
         m = get_json(f"http://{host}:{port}/v1/models")
         if isinstance(m, dict) and "data" in m:
@@ -528,6 +768,8 @@ def check_exposure(rep):
                            "for anyone who could reach it (CVE-2025-49596).")
             elif port == 50052:
                 detail += " The llama.cpp RPC server has no authentication and is meant only for trusted networks."
+            elif port == 4000:
+                detail += " A LiteLLM proxy holds the API keys of every model provider it routes to."
             rep.add("risk" if ident or port in (6277, 50052) else "warn",
                     f"{label} is reachable on your network address", detail,
                     "Bind it to 127.0.0.1 (for Ollama: OLLAMA_HOST=127.0.0.1), or keep it on the network only "
@@ -574,6 +816,60 @@ def check_open_webui(rep, ports):
             rep.add("warn", "Open WebUI lets anyone on the network sign up",
                     "New accounts are 'pending' by default, but it is one setting away from open access.",
                     "Turn off sign-up in Admin Settings > General once your users have accounts.")
+
+
+def report_app(rep, key, app):
+    """Add the finding for one self-hosted app. app: {"version": tuple or None, "source": str, "lan": bool}."""
+    name, version = APP_ADVISORIES[key]["name"], app["version"]
+    page = f"{SITE_URL}{key}.html"
+    rep.facts.setdefault("apps", {})[key] = {"version": vstr(version) if version else None,
+                                             "source": app["source"]}
+    if not version:
+        rep.add("info", f"{name} found ({app['source']}) but its version could not be read",
+                "Image tags such as latest, main or nightly don't say which release is running.",
+                f"Look up the version in {name} itself and check it at {SITE_URL}?product={key}")
+        return
+    flaws, upgrade, unfixed = app_flaws(key, version)
+    rep.facts["apps"][key]["advisories"] = len(flaws)
+    if not flaws:
+        rep.add("ok", f"{name} {vstr(version)} is past the advisories this script knows about",
+                "Newer advisories may exist; the latest release is always the safest choice.")
+        return
+    fix = (f"Update {name} to {vstr(upgrade)} or newer; the latest release is best."
+           if upgrade else f"Update {name} to the latest release.")
+    if unfixed:
+        fix += (f" {unfixed} of these list no fixed release yet, so updating won't clear "
+                f"{'it' if unfixed == 1 else 'them'}; follow the mitigations on {page}")
+    else:
+        fix += f" Details: {page}"
+    rep.add("risk" if app["lan"] else "warn",
+            f"{name} {vstr(version)} ({app['source']}) has {len(flaws)} known security "
+            f"{'advisory' if len(flaws) == 1 else 'advisories'}",
+            "; ".join(flaws), fix)
+
+
+def check_apps(rep, ports):
+    """n8n, Dify, RAGFlow, Langflow, Flowise and LiteLLM: version from the app's own port, or from the
+    tag of its running Docker image (Dify and RAGFlow only ship as images, so package scanners miss them)."""
+    found = {}
+    for key, (port, _, _) in APP_ENDPOINTS.items():
+        info = ports.get(port)
+        if not info or info["identified_as"] != APP_ADVISORIES[key]["name"]:
+            continue
+        host = "127.0.0.1" if info["local"] else rep.facts.get("lan_ip")
+        found[key] = {"version": parse_version(app_version_from_port(host, key)), "source": f"port {port}",
+                      "lan": info["lan"]}
+    if shutil.which("docker"):
+        published = {d["image"] for d in rep.facts.get("docker_published_ai_ports") or []}
+        images = parse_docker_images(run(["docker", "ps", "--format", "{{.Image}}"], timeout=10))
+        for key, (version, image) in images.items():
+            if key in found and found[key]["version"]:
+                continue
+            found[key] = {"version": version, "source": f"Docker image {image}",
+                          "lan": image in published or found.get(key, {}).get("lan", False)}
+    for key in APP_ADVISORIES:
+        if key in found:
+            report_app(rep, key, found[key])
 
 
 def check_comfyui(rep, ports):
@@ -668,6 +964,7 @@ def print_report(rep):
     print(f"Free CVE checker and model fit calculator: {SITE_URL}")
     print("Want a written review of your setup with exact fixes? MV2 of Munim, Inc. (an AI) does a")
     print(f"$49 local AI health check: {PAID_CHECK_URL}")
+    print(f"or $199 for up to 5 machines or one shared team server: {SMALL_OFFICE_URL}")
 
 
 def main(argv=None):
@@ -684,6 +981,7 @@ def main(argv=None):
     check_comfyui(rep, ports)
     check_mcp_inspector(rep, ports)
     check_docker(rep)
+    check_apps(rep, ports)
     check_secrets_in_env(rep)
 
     if args.json:
