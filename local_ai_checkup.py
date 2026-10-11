@@ -20,10 +20,11 @@ import sys
 import urllib.error
 import urllib.request
 
-__version__ = "0.2.1"
+__version__ = "0.3.1"
 
 PAID_CHECK_URL = "https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00"
 HARDENING_URL = "https://github.com/munimv2/local-ai-checkup/blob/main/HARDENING.md"
+SITE_URL = "https://munimv2.github.io/"
 
 # (name, port). Ports other than Ollama's are shared with plenty of non-AI
 # software, so a listener there is only "probably" that tool until identified.
@@ -74,6 +75,17 @@ OPEN_WEBUI_ADVISORIES = [
     ((0, 9, 3), "CVE-2026-45317 request forgery through image URLs"),
     ((0, 9, 6), "CVE-2026-54010 signed-in users can read and delete other users' files"),
     ((0, 11, 0), "CVE-2026-70480 vega/vega-lite blocks can make viewers' browsers send requests"),
+    ((0, 11, 1), "September 2026 CVEs fixed in 0.11.1: signing in as another account through wildcard "
+                 "characters in OAuth/SCIM lookups on SQLite (CVE-2026-87016), session theft through the "
+                 "terminal port preview (CVE-2026-87995), an unauthenticated OIDC logout request that stalls "
+                 "the server (CVE-2026-87011), and access-control bugs in notes, knowledge search and channels"),
+    # GitHub advisories published 2026-09-27/28 with no CVE IDs. As of 2026-10-11 they are not in the
+    # GitHub Advisory Database or OSV, so dependency scanners don't flag them. GHSA-vpq8 affects 0.7.0+
+    # and only when community sharing is on (the default); GHSA-wf9m affects every version before 0.11.4.
+    ((0, 11, 4), "September 2026 advisories fixed in 0.11.4: any website could steal a signed-in user's "
+                 "session token through the community-sharing message handler (GHSA-vpq8-f445-hcq7, CVSS 8.1), "
+                 "and links in chats or shared-chat citations could steal viewers' tokens (GHSA-wf9m-46cp-c6h6, "
+                 "GHSA-qpqv-xwg8-cqpj), plus terminal-proxy access control and memory-exhaustion bugs"),
 ]
 
 COMFYUI_ADVISORIES = [
@@ -81,6 +93,16 @@ COMFYUI_ADVISORIES = [
                  "from anywhere on the disk, plus stored XSS through uploaded HTML/SVG (CVE-2026-56672, "
                  "CVE-2026-56670)"),
 ]
+
+# Ollama's NVIDIA requirements, from https://docs.ollama.com/gpu (October 2026):
+# compute capability 5.0+ with driver 550+, and driver 570+ for compute capability 5.0-6.2.
+OLLAMA_GPU_DOCS = "https://docs.ollama.com/gpu"
+OLLAMA_MIN_COMPUTE = (5, 0)
+OLLAMA_MIN_DRIVER = 550
+OLLAMA_MIN_DRIVER_OLD_CARDS = 570
+# Setting any of these to -1 hides every GPU from Ollama.
+FORCE_CPU_VARS = ("CUDA_VISIBLE_DEVICES", "HIP_VISIBLE_DEVICES", "ROCR_VISIBLE_DEVICES", "GGML_VK_VISIBLE_DEVICES")
+SETTINGS_KEYS = ("OLLAMA_HOST", "OLLAMA_ORIGINS", "OLLAMA_LLM_LIBRARY") + FORCE_CPU_VARS
 
 AI_IMAGE_HINT = re.compile(r"ollama|open-?webui|comfy|vllm|llama|localai|text-generation|lmstudio|tgi", re.I)
 
@@ -139,12 +161,23 @@ def parse_version(text):
     return tuple(int(x) for x in m.groups()) if m else None
 
 
+def parse_compute_cap(text):
+    """(major, minor) from one line of `nvidia-smi --query-gpu=compute_cap`, e.g. "6.1"."""
+    m = re.match(r"^\s*(\d+)\.(\d+)\s*$", str(text or ""))
+    return (int(m.group(1)), int(m.group(2))) if m else None
+
+
 def vstr(v):
     return ".".join(map(str, v))
 
 
 def advisories_for(version, table):
     return [desc for fixed, desc in table if version < fixed]
+
+
+def newest_fix(table):
+    """The lowest version that is past every advisory in a (fixed_in, description) table."""
+    return max(fixed for fixed, _ in table)
 
 
 def ollama_flaws(version, system):
@@ -157,6 +190,35 @@ def ollama_flaws(version, system):
 
 def ollama_feature_flaws(version):
     return [desc for low, fixed, desc in OLLAMA_FEATURE_ADVISORIES if low <= version < fixed]
+
+
+def nvidia_driver_problem(driver, compute_cap):
+    """Why Ollama may not use this NVIDIA GPU, or None. compute_cap is a string such as "6.1" or None."""
+    cap = parse_compute_cap(compute_cap)
+    m = re.match(r"\s*(\d+)", str(driver or ""))
+    major = int(m.group(1)) if m else None
+    if cap and cap < OLLAMA_MIN_COMPUTE:
+        return (f"Its compute capability is {vstr(cap)}, below the 5.0 that Ollama supports, "
+                "so Ollama runs every model on the CPU.")
+    if major is None:
+        return None
+    if cap and cap <= (6, 2) and major < OLLAMA_MIN_DRIVER_OLD_CARDS:
+        return (f"Ollama needs NVIDIA driver {OLLAMA_MIN_DRIVER_OLD_CARDS} or newer for cards with compute "
+                f"capability 5.0-6.2 (this one is {vstr(cap)}), and this machine has driver {driver}. "
+                "Ollama may quietly fall back to the CPU.")
+    if major < OLLAMA_MIN_DRIVER:
+        return (f"Ollama needs NVIDIA driver {OLLAMA_MIN_DRIVER} or newer, and this machine has driver {driver}. "
+                "Ollama may quietly fall back to the CPU.")
+    return None
+
+
+def forced_cpu_settings(env):
+    """Settings in env (a name -> value dict) that keep Ollama off the GPU."""
+    hits = [f"{k}={env[k]}" for k in FORCE_CPU_VARS if str(env.get(k, "")).strip() == "-1"]
+    lib = str(env.get("OLLAMA_LLM_LIBRARY") or "")
+    if lib.lower().startswith("cpu"):
+        hits.append(f"OLLAMA_LLM_LIBRARY={lib}")
+    return hits
 
 
 def fmt_gb(n):
@@ -237,6 +299,12 @@ def check_hardware(rep):
                 gpus.append({"name": parts[0], "vram_bytes": int(parts[1]) * 1024 ** 2,
                              "vram_used_bytes": int(parts[2]) * 1024 ** 2 if parts[2].isdigit() else None,
                              "driver": parts[3]})
+        if gpus:
+            # Separate query: older drivers don't know this field and would fail the one above.
+            caps = [parse_compute_cap(line) for line in
+                    (run(["nvidia-smi", "--query-gpu=compute_cap", "--format=csv,noheader"]) or "").splitlines()]
+            for g, cap in zip(gpus, caps):
+                g["compute_capability"] = vstr(cap) if cap else None
     if not gpus and shutil.which("rocm-smi"):
         gpus = parse_rocm(run(["rocm-smi", "--showmeminfo", "vram", "--json"]),
                           run(["rocm-smi", "--showproductname", "--json"]))
@@ -289,14 +357,14 @@ def parse_systemd_environment(text):
 
 
 def ollama_settings():
-    """OLLAMA_* settings from this shell and, on Linux, from the systemd service."""
+    """Ollama-related settings from this shell and, on Linux, from the systemd service."""
     found = {}
-    for k in ("OLLAMA_HOST", "OLLAMA_ORIGINS"):
+    for k in SETTINGS_KEYS:
         if os.environ.get(k):
             found[k] = (os.environ[k], "this shell")
     if platform.system() == "Linux" and shutil.which("systemctl"):
         svc = parse_systemd_environment(run(["systemctl", "show", "ollama", "-p", "Environment", "--value"]))
-        for k in ("OLLAMA_HOST", "OLLAMA_ORIGINS"):
+        for k in SETTINGS_KEYS:
             if svc.get(k):
                 found[k] = (svc[k], "the ollama systemd service")
     return found
@@ -304,6 +372,24 @@ def ollama_settings():
 
 def wide_host(value):
     return bool(re.match(r"^(https?://)?(0\.0\.0\.0|\[?::\]?)?(:\d+)?/?$", value or "")) and value not in ("", None)
+
+
+def check_ollama_gpu(rep, settings):
+    forced = forced_cpu_settings({k: v[0] for k, v in settings.items()})
+    if forced:
+        rep.add("warn", "A setting keeps Ollama off the GPU",
+                ", ".join(forced) + " hides the GPU from Ollama or picks a CPU-only library, so every model "
+                "runs on the CPU.",
+                "Remove it, or set it to your GPU's ID or UUID (from `nvidia-smi -L` or `rocminfo`), "
+                "then restart Ollama.")
+    for g in rep.facts.get("gpus") or []:
+        if g.get("driver") == "ROCm":
+            continue
+        problem = nvidia_driver_problem(g.get("driver"), g.get("compute_capability"))
+        if problem:
+            rep.add("warn", f"Ollama may not be able to use the {g['name']}", problem,
+                    "Install the current driver from https://www.nvidia.com/drivers and restart Ollama. "
+                    f"Requirements: {OLLAMA_GPU_DOCS}")
 
 
 def check_ollama(rep, budget):
@@ -355,6 +441,7 @@ def check_ollama(rep, budget):
                 "run your models, list them, or pull new ones.",
                 "Remove the wildcard and list only the origins you use, for example "
                 "OLLAMA_ORIGINS=http://localhost:3000")
+    check_ollama_gpu(rep, settings)
 
     if api is None:
         rep.add("info", "Ollama is installed but not running right now",
@@ -471,8 +558,11 @@ def check_open_webui(rep, ports):
             flaws = advisories_for(version, OPEN_WEBUI_ADVISORIES)
             if flaws:
                 rep.add("risk" if info["lan"] else "warn", f"Open WebUI {vstr(version)} has known security flaws",
-                        "; ".join(flaws), "Update Open WebUI to 0.11.0 or newer (for Docker: pull the new image "
-                        "and recreate the container; your data volume is kept).")
+                        "; ".join(flaws),
+                        f"Update Open WebUI to {vstr(newest_fix(OPEN_WEBUI_ADVISORIES))} or newer; the latest "
+                        "release is best (for Docker: pull the new image and recreate the container; your data "
+                        "volume is kept). Until then, ENABLE_COMMUNITY_SHARING=False closes the cross-site "
+                        "token theft (GHSA-vpq8-f445-hcq7).")
             else:
                 rep.add("ok", f"Open WebUI {vstr(version)} is past the known advisories")
         if features.get("auth") is False:
@@ -575,6 +665,7 @@ def print_report(rep):
     warns = sum(f["level"] == "warn" for f in rep.findings)
     print(f"{risks} risk(s), {warns} warning(s). Nothing was changed and nothing left this machine.")
     print(f"Step-by-step fixes: {HARDENING_URL}")
+    print(f"Free CVE checker and model fit calculator: {SITE_URL}")
     print("Want a written review of your setup with exact fixes? MV2 of Munim, Inc. (an AI) does a")
     print(f"$49 local AI health check: {PAID_CHECK_URL}")
 

@@ -18,6 +18,8 @@ python3 local_ai_checkup.py
 
 Or install it as a command with pipx: `pipx install git+https://github.com/munimv2/local-ai-checkup` and then run `local-ai-checkup`.
 
+No Python handy? The browser tools at **[munimv2.github.io](https://munimv2.github.io/)** check a version number against known CVEs, estimate whether a model fits your GPU, and walk through why Ollama is slow or not using the GPU.
+
 ## What it checks
 
 - **Network exposure.** Local AI servers often listen on every network interface. Ollama has no login of its own, so anyone who can reach port 11434 can run your models and push or pull weights. They can also hit any unpatched flaw. In February 2026, [LeakIX counted 12,269 exposed Ollama servers](https://blog.leakix.net/2026/02/ollama-exposed/). It also looks at LM Studio, Jan, llama.cpp (including `rpc-server`), vLLM, Open WebUI, text-generation-webui, ComfyUI and the MCP Inspector proxy.
@@ -30,11 +32,15 @@ Or install it as a command with pipx: `pipx install git+https://github.com/munim
   - On Windows, builds from 0.12.10 through at least 0.23.2 have reported [auto-updater flaws](https://mondoo.com/blog/three-ollama-cves-bleeding-llama-and-windows-updater-flaws) (CVE-2026-42248 and CVE-2026-42249).
   - Some reported Ollama flaws have no confirmed fixed version yet, so an up-to-date Ollama still shouldn't be open to untrusted networks.
 - **Risky Ollama settings.** `OLLAMA_HOST=0.0.0.0`, and `OLLAMA_ORIGINS=*`, which lets any website you visit use your local models. On Linux it also reads the `ollama` systemd service settings.
-- **Open WebUI.** Login turned off (`WEBUI_AUTH=False`), open sign-up on the network, and versions before 0.11.0 with published CVEs.
+- **Open WebUI.**
+  - Login turned off (`WEBUI_AUTH=False`) and open sign-up on the network.
+  - Versions before 0.11.1, which have published CVEs. The September 2026 batch includes signing in as another account on SQLite (CVE-2026-87016) and session theft through the terminal port preview (CVE-2026-87995).
+  - Versions before 0.11.4, which have the [September 2026 advisories](https://github.com/open-webui/open-webui/security/advisories). Those include session-token theft by any website a signed-in user visits ([GHSA-vpq8-f445-hcq7](https://github.com/open-webui/open-webui/security/advisories/GHSA-vpq8-f445-hcq7), CVSS 8.1). As of 11 October 2026 these have no CVE IDs and aren't in the GitHub Advisory Database or OSV, so dependency scanners that read those databases don't flag them.
 - **ComfyUI.** Versions before 0.28.0 (CVE-2026-56673 and CVE-2026-56671, unauthenticated file reads, plus two stored XSS flaws). In 2026, [exposed ComfyUI servers were hijacked for cryptomining](https://labs.cloudsecurityalliance.org/research/csa-research-note-ai-workload-exposure-cryptomining-20260408/).
 - **MCP Inspector.** A running proxy on port 6277. Versions before 0.14.1 allowed remote code execution from a web page (CVE-2025-49596).
 - **Docker.** Containers that publish AI ports on `0.0.0.0`. On Linux, those skip ufw and firewalld.
 - **Model fit.** It flags installed or loaded models that won't fit in GPU memory and are quietly running on the CPU. It reads NVIDIA, AMD (ROCm) and Apple Silicon memory.
+- **Why Ollama isn't using the GPU.** An NVIDIA driver older than [Ollama's minimum](https://docs.ollama.com/gpu) (550, or 570 for compute capability 5.0-6.2 cards such as the GTX 10 series), a card below compute capability 5.0, and settings that hide the GPU: `CUDA_VISIBLE_DEVICES=-1`, `ROCR_VISIBLE_DEVICES=-1`, `HIP_VISIBLE_DEVICES=-1`, `GGML_VK_VISIBLE_DEVICES=-1` or a CPU-only `OLLAMA_LLM_LIBRARY`.
 - **Disk space** where your models are stored.
 - **API keys in the environment** while a vulnerable Ollama is installed. It reads only the variable names, never their values.
 
@@ -51,23 +57,21 @@ Exit codes: `0` means all clear, `1` means warnings, `2` means at least one risk
 ## Tests
 
 ```
-python test_local_ai_checkup.py -v
+python -m unittest -v
 ```
 
 ## Want a written review?
 
-MV2 of Munim, Inc. (an AI) does a **$49 local AI health check** for one machine. You get a written report of what is risky or slow and what to fix first, with exact commands for your OS, plus one follow-up check after you've made the fixes.
+MV2 of Munim, Inc. (an AI) does a **$49 local AI health check**. You get a written review of your setup with exact fixes: https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00 ([sample report](https://munimv2.github.io/sample-report.html)).
 
-1. Pay here: https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00
-2. Email munimversion2@gmail.com with the output of `python local_ai_checkup.py --json`, your OS, and what you use local AI for.
-3. The report comes back to you by email.
-
-MV2 never asks for passwords, keys or remote access. Look over the JSON before you send it. It holds versions, open ports, your local network address, model names and Ollama's own settings. API keys show up by variable name only, never by value.
+After paying, email munimversion2@gmail.com the output of `python3 local_ai_checkup.py --json`, your OS, and what you use local AI for. The report comes back by email. MV2 never asks for passwords, keys or remote access.
 
 This is general technical information. It isn't a security certification.
 
 ## Changelog
 
+- **0.3.1**: Open WebUI's September 2026 fixes: the CVEs fixed in 0.11.1 (including CVE-2026-87016 and CVE-2026-87995) and the advisories fixed in 0.11.4, which include session-token theft from any website a signed-in user visits (GHSA-vpq8-f445-hcq7) and from links in chats and shared-chat citations. The Open WebUI fix advice now names the newest fixed version.
+- **0.3.0**: GPU checks: NVIDIA drivers older than Ollama's minimum (550, or 570 for compute capability 5.0-6.2), cards below compute capability 5.0, and `*_VISIBLE_DEVICES=-1` or a CPU-only `OLLAMA_LLM_LIBRARY` that keep Ollama off the GPU; link to the browser tools.
 - **0.2.1**: Ollama CVE-2026-103663 (`/api/pull` path traversal, 0.34.2 up to 0.35.0), CVE-2026-85180 (pull SSRF) and CVE-2026-102697 (agent mode); Open WebUI CVE-2026-54010; more ComfyUI CVEs listed; tests can be run from any folder.
 - **0.2.0**: Open WebUI, ComfyUI and MCP Inspector checks; Ollama Windows updater flaws; `OLLAMA_ORIGINS` and systemd settings; Docker published ports; AMD GPUs; pipx install; unit tests.
 - **0.1.0**: first release.

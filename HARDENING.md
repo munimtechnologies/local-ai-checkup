@@ -75,7 +75,14 @@ A firewall is a second layer. It doesn't replace binding to localhost.
 
 - Keep the login on. `WEBUI_AUTH=False` makes every visitor an admin. Use it only for a single-user setup bound to `127.0.0.1`.
 - Once your users have accounts, turn off sign-up in *Admin Settings > General*.
-- Update to 0.11.0 or newer. Older versions have published CVEs: stored XSS, cross-user chat access, request forgery, and users reading other users' files. With Docker, run `docker pull ghcr.io/open-webui/open-webui:main` and then recreate the container. Your data lives in the volume, so it's kept.
+- Update to 0.11.4 or newer; the latest release is best. Older versions have published CVEs and advisories: stored XSS, cross-user chat access, request forgery, and users reading other users' files. Versions before 0.11.1 also allow signing in as another account through OAuth/SCIM lookups on SQLite (CVE-2026-87016) and session theft through the terminal port preview (CVE-2026-87995). Versions before 0.11.4 also let session tokens be stolen:
+  - From 0.7.0, any website a signed-in user visits could take their token through the community-sharing message handler ([GHSA-vpq8-f445-hcq7](https://github.com/open-webui/open-webui/security/advisories/GHSA-vpq8-f445-hcq7), CVSS 8.1).
+  - In any version, a `javascript:` link in a chat or in a shared chat's citation could do the same.
+
+  The 0.11.4 advisories have no CVE IDs and, as of 11 October 2026, aren't in the GitHub Advisory Database or OSV, so a dependency scanner may report an older Open WebUI as clean. Check the version yourself under *Settings > About*.
+
+  With Docker, run `docker pull ghcr.io/open-webui/open-webui:main` and then recreate the container. Your data lives in the volume, so it's kept.
+- Can't update yet? Set `ENABLE_COMMUNITY_SHARING=False`. The advisory says deployments with community sharing off aren't affected by GHSA-vpq8-f445-hcq7. After updating, sign everyone out (0.12.0 adds *sign out all devices* in the user edit dialog) so any stolen token stops working.
 - Publish it on localhost (`-p 127.0.0.1:3000:8080`), or put a VPN or proxy in front of it.
 
 ## ComfyUI
@@ -96,7 +103,21 @@ Port 6277 is the MCP Inspector proxy. Versions before 0.14.1 let any web page yo
 
 ## Speed: models that don't fit
 
-If a model is larger than about 90% of your VRAM, part of it runs on the CPU and gets several times slower. `ollama ps` shows the split. To fix it, pick a smaller quantization (Q4_K_M is a good default), pick a smaller model, or lower the context length (`num_ctx`), since long contexts need memory on top of the weights.
+If a model is larger than about 90% of your VRAM, part of it runs on the CPU and gets several times slower. `ollama ps` shows the split. To fix it, pick a smaller quantization (Q4_K_M is a good default), pick a smaller model, or lower the context length (`num_ctx`), since long contexts need memory on top of the weights. To estimate fit before you download, use the [model fit calculator](https://munimv2.github.io/fit.html).
+
+## Speed: Ollama not using the GPU at all
+
+If `ollama ps` shows `100% CPU` for a small model, Ollama didn't find or couldn't use the GPU. The requirements below are from [Ollama's GPU docs](https://docs.ollama.com/gpu).
+
+- **NVIDIA driver too old.** Ollama needs driver 550 or newer, and 570 or newer for cards with compute capability 5.0-6.2 (for example the GTX 10 series). Check with `nvidia-smi` and `nvidia-smi --query-gpu=compute_cap --format=csv`. Install the current driver from https://www.nvidia.com/drivers and restart Ollama.
+- **Card too old.** Compute capability below 5.0 isn't supported, and Ollama will use the CPU.
+- **A setting hides the GPU.** `CUDA_VISIBLE_DEVICES=-1`, `ROCR_VISIBLE_DEVICES=-1`, `HIP_VISIBLE_DEVICES=-1` or `GGML_VK_VISIBLE_DEVICES=-1` force CPU use, and so does a CPU-only `OLLAMA_LLM_LIBRARY` such as `cpu_avx2`. Remove it or set your GPU's UUID (`nvidia-smi -L`), then restart Ollama.
+- **Docker.** Run the container with `--gpus all` and install the NVIDIA Container Toolkit. `docker run --gpus all ubuntu nvidia-smi` must work, or Ollama can't see the GPU.
+- **Linux after suspend.** Ollama can fall back to the CPU after a resume. Reload the driver with `sudo rmmod nvidia_uvm && sudo modprobe nvidia_uvm`.
+- **AMD.** Ollama needs the ROCm v7 driver. On Linux, some unsupported cards work with `HSA_OVERRIDE_GFX_VERSION` (for example `10.3.0` for an RX 5400).
+- **Still stuck?** The server log says what it found at startup. It's at `%LOCALAPPDATA%\Ollama\server.log` on Windows and `~/.ollama/logs/server.log` on macOS. On Linux, run `journalctl -u ollama --no-pager`.
+
+A step-by-step version is at [munimv2.github.io/ollama-gpu.html](https://munimv2.github.io/ollama-gpu.html).
 
 ---
 

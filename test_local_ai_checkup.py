@@ -56,12 +56,25 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(lac.ollama_feature_flaws((0, 13, 9)), [])
 
     def test_open_webui_and_comfyui_advisories(self):
-        self.assertEqual(len(lac.advisories_for((0, 8, 5), lac.OPEN_WEBUI_ADVISORIES)), 4)
-        self.assertEqual(len(lac.advisories_for((0, 9, 5), lac.OPEN_WEBUI_ADVISORIES)), 2)
-        self.assertEqual(len(lac.advisories_for((0, 10, 0), lac.OPEN_WEBUI_ADVISORIES)), 1)
-        self.assertEqual(lac.advisories_for((0, 11, 0), lac.OPEN_WEBUI_ADVISORIES), [])
+        self.assertEqual(len(lac.advisories_for((0, 8, 5), lac.OPEN_WEBUI_ADVISORIES)), 6)
+        self.assertEqual(len(lac.advisories_for((0, 9, 5), lac.OPEN_WEBUI_ADVISORIES)), 4)
+        self.assertEqual(len(lac.advisories_for((0, 10, 0), lac.OPEN_WEBUI_ADVISORIES)), 3)
         self.assertEqual(len(lac.advisories_for((0, 3, 76), lac.COMFYUI_ADVISORIES)), 1)
         self.assertEqual(lac.advisories_for((0, 28, 0), lac.COMFYUI_ADVISORIES), [])
+
+    def test_open_webui_september_2026_advisories(self):
+        flaws = lac.advisories_for((0, 11, 0), lac.OPEN_WEBUI_ADVISORIES)
+        self.assertEqual(len(flaws), 2)
+        self.assertIn("CVE-2026-87016", flaws[0])
+        self.assertIn("GHSA-vpq8-f445-hcq7", flaws[1])
+        for v in ((0, 11, 1), (0, 11, 3)):
+            flaws = lac.advisories_for(v, lac.OPEN_WEBUI_ADVISORIES)
+            self.assertEqual(len(flaws), 1, v)
+            self.assertIn("GHSA-vpq8-f445-hcq7", flaws[0])
+        self.assertEqual(lac.advisories_for((0, 11, 4), lac.OPEN_WEBUI_ADVISORIES), [])
+        self.assertEqual(lac.advisories_for((0, 12, 0), lac.OPEN_WEBUI_ADVISORIES), [])
+        self.assertEqual(lac.newest_fix(lac.OPEN_WEBUI_ADVISORIES), (0, 11, 4))
+        self.assertEqual(lac.newest_fix(lac.COMFYUI_ADVISORIES), (0, 28, 0))
 
     def test_wide_host(self):
         for v in ("0.0.0.0", "0.0.0.0:11434", "http://0.0.0.0:11434", "::", "[::]:11434", ":11434"):
@@ -94,6 +107,43 @@ class ParseTests(unittest.TestCase):
         self.assertIn("Radeon RX 7800 XT", gpus[0]["name"])
         self.assertEqual(lac.parse_rocm("not json", None), [])
         self.assertEqual(lac.parse_rocm(None, None), [])
+
+
+class GpuTests(unittest.TestCase):
+    def test_parse_compute_cap(self):
+        self.assertEqual(lac.parse_compute_cap("6.1"), (6, 1))
+        self.assertEqual(lac.parse_compute_cap(" 12.0 "), (12, 0))
+        self.assertIsNone(lac.parse_compute_cap('Field "compute_cap" is not a valid field to query.'))
+        self.assertIsNone(lac.parse_compute_cap(None))
+
+    def test_nvidia_driver_problem(self):
+        self.assertIsNone(lac.nvidia_driver_problem("566.36", "8.9"))
+        self.assertIsNone(lac.nvidia_driver_problem("550.54.15", "8.6"))
+        self.assertIn("550", lac.nvidia_driver_problem("535.183.01", "8.6"))
+        # Compute capability 5.0-6.2 (GTX 10-series and older Maxwell/Pascal) needs driver 570+.
+        self.assertIn("570", lac.nvidia_driver_problem("566.36", "6.1"))
+        self.assertIsNone(lac.nvidia_driver_problem("572.16", "6.1"))
+        self.assertIn("5.0", lac.nvidia_driver_problem("572.16", "3.5"))
+        # Unknown compute capability: only the general minimum can be checked.
+        self.assertIsNone(lac.nvidia_driver_problem("560.94", None))
+        self.assertIn("550", lac.nvidia_driver_problem("531.79", None))
+        self.assertIsNone(lac.nvidia_driver_problem(None, None))
+
+    def test_forced_cpu_settings(self):
+        self.assertEqual(lac.forced_cpu_settings({"CUDA_VISIBLE_DEVICES": "-1"}), ["CUDA_VISIBLE_DEVICES=-1"])
+        self.assertEqual(lac.forced_cpu_settings({"OLLAMA_LLM_LIBRARY": "cpu_avx2"}), ["OLLAMA_LLM_LIBRARY=cpu_avx2"])
+        self.assertEqual(lac.forced_cpu_settings({"CUDA_VISIBLE_DEVICES": "0", "OLLAMA_LLM_LIBRARY": "cuda_v12"}), [])
+        self.assertEqual(lac.forced_cpu_settings({}), [])
+
+    def test_check_ollama_gpu_findings(self):
+        rep = lac.Report()
+        rep.facts["gpus"] = [{"name": "NVIDIA GeForce GTX 1050", "driver": "560.94", "compute_capability": "6.1"},
+                             {"name": "AMD Radeon RX 7800 XT", "driver": "ROCm"}]
+        lac.check_ollama_gpu(rep, {"CUDA_VISIBLE_DEVICES": ("-1", "this shell")})
+        titles = [f["title"] for f in rep.findings]
+        self.assertEqual(len(titles), 2)
+        self.assertIn("A setting keeps Ollama off the GPU", titles)
+        self.assertIn("Ollama may not be able to use the NVIDIA GeForce GTX 1050", titles)
 
 
 class SmokeTest(unittest.TestCase):
