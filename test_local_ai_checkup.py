@@ -160,13 +160,22 @@ class AppTests(unittest.TestCase):
         self.assertEqual(lac.app_flaws("ragflow", (0, 24, 0))[:2], ([lac.APP_ADVISORIES["ragflow"]["items"][6][3]], (0, 25, 0)))
         self.assertEqual(lac.app_flaws("ragflow", (0, 25, 1))[0], [])
         flaws, upgrade, unfixed = lac.app_flaws("litellm", (1, 96, 0))
-        self.assertEqual((len(flaws), upgrade, unfixed), (1, (1, 100, 4), 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (2, (1, 100, 4), 0))
         flaws, upgrade, unfixed = lac.app_flaws("litellm", (1, 82, 7))
         self.assertEqual((len(flaws), upgrade, unfixed), (9, (1, 95, 0), 1))
         self.assertEqual(lac.app_flaws("litellm", (1, 101, 3))[0], [])
         flaws, upgrade, unfixed = lac.app_flaws("langflow", (1, 10, 2))
         self.assertEqual((len(flaws), upgrade, unfixed), (4, (1, 12, 0), 0))
         self.assertEqual(lac.app_flaws("langflow", (1, 12, 0))[0], [])
+
+    def test_litellm_cve_2026_84377_follows_each_release_line(self):
+        # OSV's record for GHSA-3cv6-jpf6-8222 (checked 2026-10-13): one range per release line, although
+        # the advisory's own range says only <1.94.0.
+        for v in ((1, 88, 5), (1, 89, 6), (1, 93, 1), (1, 94, 0), (1, 94, 2), (1, 95, 0), (1, 96, 1)):
+            self.assertIn(lac._LITELLM_3CV6, lac.app_flaws("litellm", v)[0], v)
+        for v in ((1, 88, 6), (1, 89, 7), (1, 93, 2), (1, 94, 3), (1, 95, 1), (1, 96, 2), (1, 97, 0)):
+            self.assertNotIn(lac._LITELLM_3CV6, lac.app_flaws("litellm", v)[0], v)
+        self.assertEqual(lac.app_flaws("litellm", (1, 95, 0))[1], (1, 100, 4))
 
     def test_anythingllm_flaws_match_the_site_checker(self):
         # munimv2.github.io/?product=anythingllm gives these (Windows-only advisory not counted).
@@ -188,7 +197,7 @@ class AppTests(unittest.TestCase):
         self.assertEqual(len(lac.app_flaws("vllm", (0, 29, 0))[0]), 3)
         self.assertEqual(len(lac.app_flaws("vllm", (0, 28, 0))[0]), 4)
         flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 11, 0))
-        self.assertEqual((len(flaws), upgrade, unfixed), (14, (0, 31, 0), 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (15, (0, 31, 0), 0))
         self.assertEqual(lac.app_flaws("vllm", (0, 31, 0))[0], [])
         found = lac.parse_docker_images("vllm/vllm-openai:v0.30.0\n")
         self.assertEqual(found["vllm"][0], (0, 30, 0))
@@ -196,6 +205,15 @@ class AppTests(unittest.TestCase):
         self.assertEqual(version({"version": "0.31.0"}), "0.31.0")
         self.assertIsNone(version({"version": "0.31.0", "object": "list"}))
         self.assertEqual(lac.APP_ENDPOINTS["vllm"][:2], (8000, "/version"))
+
+    def test_vllm_ghsa_mm38_uses_the_release_tag_range(self):
+        # The advisory says "<= 0.8.5"; the Nemotron-VL code it names ships from 0.10.2 to 0.24.x.
+        def has_mm38(v):
+            return any("GHSA-mm38-5g96-7j6x" in d for d in lac.app_flaws("vllm", v)[0])
+        self.assertTrue(has_mm38((0, 10, 2)))
+        self.assertTrue(has_mm38((0, 24, 0)))
+        self.assertFalse(has_mm38((0, 10, 1)))
+        self.assertFalse(has_mm38((0, 25, 0)))
 
     def test_app_endpoint_fields_are_strict(self):
         n8n, langflow, flowise, litellm = (lac.APP_ENDPOINTS[k][2] for k in ("n8n", "langflow", "flowise", "litellm"))

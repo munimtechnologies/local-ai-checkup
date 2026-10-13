@@ -20,7 +20,7 @@ import sys
 import urllib.error
 import urllib.request
 
-__version__ = "0.4.1"
+__version__ = "0.4.2"
 
 PAID_CHECK_URL = "https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00"
 SMALL_OFFICE_URL = "https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01"
@@ -115,8 +115,15 @@ _N8N_SEP30 = ("30 September 2026 batch (15 advisories, 10 high, no CVE IDs, not 
               "through the MCP workflow validator, Git node code execution")
 _LITELLM_7HP6 = ("GHSA-7hp6-4w63-5g45 (CVSS 9.9, no CVE ID): any internal user can forge an admin session, become "
                  "proxy admin and run host commands; workaround EXPERIMENTAL_UI_LOGIN=false")
+# CVE-2026-84377 (GHSA-3cv6-jpf6-8222): the advisory's range says <1.94.0, but its patched versions and the
+# OSV record (checked 2026-10-13) give one range per release line, up to 1.96.2.
+_LITELLM_3CV6 = ("CVE-2026-84377: signed-in users can redirect provider calls and leak stored provider keys "
+                 "(fixed per release line in 1.88.6, 1.89.7, 1.90.7, 1.91.5, 1.92.2, 1.93.2, 1.94.3, 1.95.1 "
+                 "and 1.96.2)")
 # vLLM published three batches with no CVE IDs (12 September, 6 and 9 October 2026); as of 2026-10-11
 # GHSA-h3rc, GHSA-gx7p, GHSA-rhcx, GHSA-w9r6 and GHSA-p6g9 are not in OSV, so scanners don't flag them.
+# GHSA-mm38 says "<= 0.8.5", but the code it names ships from 0.10.2 to 0.24.x (release tags checked
+# 2026-10-13); it is not in OSV either.
 APP_ADVISORIES = {
     "n8n": {"name": "n8n", "items": [
         ((0, 211, 0), (1, 120, 4), None, "CVE-2025-68613: signed-in users can run code on the server through "
@@ -272,8 +279,15 @@ APP_ADVISORIES = {
         (None, (1, 84, 0), None, "CVE-2026-49468, CVE-2026-59822: a crafted Host header gets past the proxy's "
                                  "authentication (CVSS 9.8); MCP auth bypass"),
         ((1, 65, 5), (1, 85, 0), None, "GHSA-hhww-mrg2-969h: reflected XSS in /sso/debug/callback"),
-        (None, (1, 94, 0), None, "CVE-2026-84377: signed-in users can redirect provider calls and leak stored "
-                                 "provider keys (backport fixes in 1.88.6-1.93.2)"),
+        (None, (1, 88, 6), None, _LITELLM_3CV6),
+        ((1, 89, 0), (1, 89, 7), None, _LITELLM_3CV6),
+        ((1, 90, 0), (1, 90, 7), None, _LITELLM_3CV6),
+        ((1, 91, 0), (1, 91, 5), None, _LITELLM_3CV6),
+        ((1, 92, 0), (1, 92, 2), None, _LITELLM_3CV6),
+        ((1, 93, 0), (1, 93, 2), None, _LITELLM_3CV6),
+        ((1, 94, 0), (1, 94, 3), None, _LITELLM_3CV6),
+        ((1, 95, 0), (1, 95, 1), None, _LITELLM_3CV6),
+        ((1, 96, 0), (1, 96, 2), None, _LITELLM_3CV6),
         (None, (1, 95, 0), None, "GHSA-g5ff-637f-6q2m (no CVE ID, not in OSV): the internal_user_viewer role can "
                                  "read any file the proxy can, such as the master key (CVSS 8.1)"),
         ((1, 91, 0), (1, 100, 4), None, _LITELLM_7HP6),
@@ -306,6 +320,10 @@ APP_ADVISORIES = {
         (None, (0, 24, 0), None, "CVE-2026-55574, CVE-2026-54234 and 9 October 2026 advisories without CVE IDs: "
                                  "regex denial of service in structured outputs, engine crashes, SSRF through "
                                  "X-Request-Id leaking KV-cache tensors on P2pNcclConnector setups"),
+        ((0, 10, 2), (0, 25, 0), None, "GHSA-mm38-5g96-7j6x (no CVE ID, not in OSV): the Nemotron-VL processors "
+                                       "switch off Pillow's decompression-bomb limit for the whole process, so an "
+                                       "oversized image can exhaust memory (High); the advisory's own range, "
+                                       "\"<= 0.8.5\", misses these versions"),
         (None, (0, 28, 0), None, "CVE-2026-93592 and others: a negative token ID sent to /v1/embeddings or /pooling "
                                  "crashes the engine (CVSS 7.5)"),
         (None, (0, 29, 0), None, "12 September and 9 October 2026 advisories (mostly no CVE IDs): out-of-range "
