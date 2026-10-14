@@ -12,11 +12,11 @@ python local_ai_checkup.py --json   # JSON report
 You only need Python 3.8 or newer. There are no dependencies. To grab the single file and run it:
 
 ```
-curl -O https://raw.githubusercontent.com/munimv2/local-ai-checkup/main/local_ai_checkup.py
+curl -O https://raw.githubusercontent.com/munimtechnologies/local-ai-checkup/main/local_ai_checkup.py
 python3 local_ai_checkup.py
 ```
 
-Or install it as a command with pipx: `pipx install git+https://github.com/munimv2/local-ai-checkup` and then run `local-ai-checkup`.
+Or install it as a command with pipx: `pipx install git+https://github.com/munimtechnologies/local-ai-checkup` and then run `local-ai-checkup`.
 
 No Python handy? The browser tools at **[munimv2.github.io](https://munimv2.github.io/)** check a version number against known CVEs, estimate whether a model fits your GPU, and walk through why Ollama is slow or not using the GPU.
 

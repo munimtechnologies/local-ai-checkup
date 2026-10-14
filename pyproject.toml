@@ -19,7 +19,7 @@ classifiers = [
 ]
 
 [project.urls]
-Homepage = "https://github.com/munimv2/local-ai-checkup"
+Homepage = "https://github.com/munimtechnologies/local-ai-checkup"
 Website = "https://munimv2.github.io/"
 
 [project.scripts]

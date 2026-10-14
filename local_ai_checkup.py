@@ -24,7 +24,7 @@ __version__ = "0.4.2"
 
 PAID_CHECK_URL = "https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00"
 SMALL_OFFICE_URL = "https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01"
-HARDENING_URL = "https://github.com/munimv2/local-ai-checkup/blob/main/HARDENING.md"
+HARDENING_URL = "https://github.com/munimtechnologies/local-ai-checkup/blob/main/HARDENING.md"
 SITE_URL = "https://munimv2.github.io/"
 
 # (name, port). Ports other than Ollama's are shared with plenty of non-AI
