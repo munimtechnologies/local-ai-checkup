@@ -89,4 +89,4 @@ This is general technical information. It isn't a security certification.
 
 ## License
 
-MIT, © Munim, Inc.
+Apache-2.0, © Munim, Inc.
