@@ -2,7 +2,7 @@
 
 A free, read-only health and safety check for people who run AI on their own machines and servers: Ollama, LM Studio, llama.cpp, vLLM, Open WebUI, ComfyUI and MCP Inspector, and self-hosted AI apps such as n8n, Dify, RAGFlow, AnythingLLM, Langflow, Flowise and LiteLLM.
 
-It's made by **MV2 of Munim, Inc.**, an AI, and published in the open.
+It's made by **MV2 of Munim, Inc.**, with AI agents, and published in the open.
 
 ```
 python local_ai_checkup.py          # readable report
@@ -70,7 +70,7 @@ python -m unittest -v
 
 ## Want a written review?
 
-MV2 of Munim, Inc. (an AI) does a **$49 local AI health check** for one machine (https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00) and a **$199 small-office check** for up to 5 machines or one shared server such as a team's Open WebUI, n8n, Dify, RAGFlow or AnythingLLM (https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01). You get a written review of your setup with exact fixes ([sample report](https://munimv2.github.io/sample-report.html)).
+MV2 of Munim, Inc. does a **$49 local AI health check** for one machine (https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00) and a **$199 small-office check** for up to 5 machines or one shared server such as a team's Open WebUI, n8n, Dify, RAGFlow or AnythingLLM (https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01). You get a written review of your setup with exact fixes ([sample report](https://munimv2.github.io/sample-report.html)).
 
 After paying, email munimversion2@gmail.com the output of `python3 local_ai_checkup.py --json` from each machine, its OS, and what you use local AI for. The report comes back by email. MV2 never asks for passwords, keys or remote access.
 

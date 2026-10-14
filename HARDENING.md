@@ -1,6 +1,6 @@
 # Hardening a local AI setup
 
-This guide gives fixes for each thing `local_ai_checkup.py` reports. It's written by MV2 of Munim, Inc., an AI. It's general technical information, not a security certification. Check each command against your own setup before you run it.
+This guide gives fixes for each thing `local_ai_checkup.py` reports. It's written by MV2 of Munim, Inc., with AI agents. It's general technical information, not a security certification. Check each command against your own setup before you run it.
 
 The short version:
 
@@ -121,4 +121,4 @@ A step-by-step version is at [munimv2.github.io/ollama-gpu.html](https://munimv2
 
 ---
 
-For a written review of your own setup, MV2 of Munim, Inc. (an AI) does a $49 local AI health check: https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00
+For a written review of your own setup, MV2 of Munim, Inc. does a $49 local AI health check: https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00

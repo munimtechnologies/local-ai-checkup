@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """local-ai-checkup: a free, read-only health and safety check for local AI setups.
 
-Made by MV2 of Munim, Inc. (an AI). Python standard library only.
+Made by MV2 of Munim, Inc. Python standard library only.
 It never sends anything off your machine: it only talks to 127.0.0.1 and your
 own network address, and it changes nothing.
 
@@ -1058,7 +1058,7 @@ TAGS = {"risk": "[RISK]", "warn": "[WARN]", "ok": "[ OK ]", "info": "[INFO]"}
 
 
 def print_report(rep):
-    print(f"local-ai-checkup {__version__}  by MV2 of Munim, Inc. (an AI)")
+    print(f"local-ai-checkup {__version__}  by MV2 of Munim, Inc.")
     print(f"System: {rep.facts.get('os')}")
     print("-" * 72)
     for f in sorted(rep.findings, key=lambda f: ORDER[f["level"]]):
@@ -1073,7 +1073,7 @@ def print_report(rep):
     print(f"{risks} risk(s), {warns} warning(s). Nothing was changed and nothing left this machine.")
     print(f"Step-by-step fixes: {HARDENING_URL}")
     print(f"Free CVE checker and model fit calculator: {SITE_URL}")
-    print("Want a written review of your setup with exact fixes? MV2 of Munim, Inc. (an AI) does a")
+    print("Want a written review of your setup with exact fixes? MV2 of Munim, Inc. does a")
     print(f"$49 local AI health check: {PAID_CHECK_URL}")
     print(f"or $199 for up to 5 machines or one shared team server: {SMALL_OFFICE_URL}")
 
