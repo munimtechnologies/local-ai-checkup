@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Local AI Health Check &mdash; MV2 of Munim, Inc.</title>
+<meta name="description" content="A written, read-only health and safety review of your self-hosted AI setup (Ollama, Open WebUI, LM Studio, llama.cpp and more). Run the free tool, send the JSON, get exact fixes back. By MV2 of Munim, Inc., with AI agents.">
+<style>
+  :root { color-scheme: light dark; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.6; margin: 0; color: #1a1a2e; background: #f7f8fb;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 2rem 1.25rem 4rem; }
+  header { padding-top: 1.5rem; }
+  h1 { font-size: 1.9rem; margin: 0 0 .4rem; line-height: 1.25; }
+  h2 { font-size: 1.25rem; margin: 2.2rem 0 .6rem; }
+  .tag { color: #555; font-size: 1.05rem; margin: 0 0 1.4rem; }
+  .cards { display: flex; flex-wrap: wrap; gap: 1rem; margin: 1.2rem 0; }
+  .card {
+    flex: 1 1 320px; border: 1px solid #d9dde6; border-radius: 12px;
+    background: #fff; padding: 1.3rem 1.3rem 1.5rem;
+  }
+  .card h3 { margin: 0 0 .2rem; font-size: 1.15rem; }
+  .price { font-size: 2rem; font-weight: 700; margin: .2rem 0 .3rem; }
+  .price span { font-size: .95rem; font-weight: 400; color: #666; }
+  .card ul { margin: .6rem 0 1.1rem; padding-left: 1.1rem; }
+  .card li { margin: .25rem 0; }
+  .btn {
+    display: inline-block; background: #2b5cff; color: #fff; text-decoration: none;
+    font-weight: 600; padding: .7rem 1.2rem; border-radius: 8px; font-size: 1rem;
+  }
+  .btn:hover { background: #1f49d6; }
+  a { color: #2b5cff; }
+  code {
+    background: #eef1f7; padding: .12rem .4rem; border-radius: 5px;
+    font-size: .92em; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  }
+  ol li { margin: .35rem 0; }
+  .note {
+    border-left: 3px solid #2b5cff; background: #eef1f7; padding: .8rem 1rem;
+    border-radius: 0 8px 8px 0; margin: 1.4rem 0; font-size: .97rem;
+  }
+  footer {
+    margin-top: 3rem; padding-top: 1.4rem; border-top: 1px solid #d9dde6;
+    font-size: .9rem; color: #555;
+  }
+  @media (prefers-color-scheme: dark) {
+    body { color: #e8eaf2; background: #12131a; }
+    .card, .note { background: #1b1d27; border-color: #2a2d3a; }
+    .note { background: #1b1d27; }
+    code { background: #262935; }
+    .tag, .price span, footer { color: #a9afc3; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>Local AI Health Check</h1>
+  <p class="tag">A written, read-only review of your self-hosted AI setup &mdash; with exact fixes. By MV2 of Munim, Inc., with AI agents.</p>
+</header>
+
+<p>Running Ollama, Open WebUI, LM Studio, llama.cpp or a similar stack on your own
+machines? It is easy to leave a model server listening on every network interface,
+skip authentication on a shared Open WebUI, or run a version with a known security
+advisory. This service finds those problems and tells you exactly how to fix them.</p>
+
+<p><strong>Start free:</strong> the checker is open source (Apache-2.0). Run it yourself,
+read the output, and keep it &mdash; no account, no sign-up, nothing sent anywhere by the tool.
+See <a href="https://github.com/munimtechnologies/local-ai-checkup">github.com/munimtechnologies/local-ai-checkup</a>.</p>
+
+<h2>Want it reviewed and fixed for you?</h2>
+<div class="cards">
+  <div class="card">
+    <h3>Single machine</h3>
+    <div class="price">$49 <span>one-time</span></div>
+    <ul>
+      <li>One written report for one machine</li>
+      <li>Every risk explained in plain language</li>
+      <li>Exact, copy-paste fix commands for your OS</li>
+      <li>Model and quantization picks that fit your VRAM</li>
+      <li>Delivered within 2 business days</li>
+    </ul>
+    <a class="btn" href="https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00">Buy the $49 check</a>
+  </div>
+  <div class="card">
+    <h3>Small office</h3>
+    <div class="price">$199 <span>one-time</span></div>
+    <ul>
+      <li>Up to 5 machines, or one shared Open WebUI / Ollama server</li>
+      <li>Shared-server exposure &amp; access settings reviewed first</li>
+      <li>Per-machine table of risks, speed and model fit</li>
+      <li>One ordered fix list for the whole office</li>
+      <li>Delivered within 2 business days</li>
+    </ul>
+    <a class="btn" href="https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01">Buy the $199 check</a>
+  </div>
+</div>
+
+<p><a href="https://github.com/munimtechnologies/local-ai-checkup/blob/main/docs/sample-report.md">See a full sample report &rarr;</a></p>
+
+<h2>How it works</h2>
+<ol>
+  <li>Install and run the free checker:
+    <code>python3 local_ai_checkup.py --json</code> on each machine.</li>
+  <li>Buy the tier above that fits you.</li>
+  <li>Email the <code>--json</code> output from each machine, plus your OS and what you
+    want from your setup, to <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a>.</li>
+  <li>You get your written report back within 2 business days.</li>
+</ol>
+
+<div class="note">
+  <strong>Read-only and private.</strong> The checker only reads your configuration &mdash;
+  it never changes anything, and MV2 never asks for your passwords, keys, or remote access.
+  You decide what to send. This is general technical information to help you harden your own
+  setup, not a formal security certification or audit.
+</div>
+
+<footer>
+  <p>By MV2 of Munim, Inc. Reports are prepared by MV2 of Munim, Inc., with AI agents.
+  Tool and docs are open source under Apache-2.0.</p>
+  <p>Questions before buying? <a href="mailto:munimversion2@gmail.com">munimversion2@gmail.com</a></p>
+</footer>
+</div>
+</body>
+</html>
