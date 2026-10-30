@@ -20,7 +20,7 @@ import sys
 import urllib.error
 import urllib.request
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 
 PAID_CHECK_URL = "https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00"
 SMALL_OFFICE_URL = "https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01"
@@ -117,12 +117,13 @@ _N8N_SEP16 = ("16 September 2026 batch (at least 12 advisories, no CVE IDs, not 
 _N8N_SEP30 = ("30 September 2026 batch (15 advisories, 10 high, no CVE IDs, not in OSV): unauthenticated OAuth "
               "client persistence, unauthenticated approval of waiting executions, owner account takeover "
               "through the MCP workflow validator, Git node code execution")
-_N8N_OCT14 = ("14 October 2026 batch (at least 10 advisories, no CVE IDs): Slack token theft and SSRF through "
-              "the Slack Trigger webhook without a login, credential permission checks that members can get "
-              "around, OData and Quick Base filter injection from workflow input")
-_N8N_OCT28 = ("28 October 2026 batch (12 advisories, 3 high, no CVE IDs): code execution in the n8n main process "
-              "through deprecated Code nodes (CVSS 8.7), workflow expression isolation and GraphicsMagick flaws, "
-              "an embedded chat that skips user auth on some requests, credentials sent on cross-origin redirects")
+_N8N_OCT14 = ("14 October 2026 batch (at least 10 advisories, no CVE IDs): stored XSS through webhook "
+              "responses served without the sandbox CSP, credential permission checks that miss some "
+              "sub-workflow nodes, secrets leaking into execution data, OData and Quick Base filter injection")
+_N8N_OCT28 = ("28 October 2026 batch (12 advisories, 3 high, no CVE IDs): an expression sandbox escape "
+              "and the bundled GraphicsMagick both run code, an embedded chat skips user auth on some requests, "
+              "credentials are sent on cross-origin redirects; on 2.42.5 and older, 2.43.0-2.43.2 and 3.0.0, "
+              "deprecated Code nodes also run code in the n8n main process (CVSS 8.7)")
 # GHSA-w4c7-34wj-hqm8 lists one fixed release per line: 1.103.10, 1.104.8, 1.105.6 and 1.106.5.
 _LITELLM_W4C7 = ("GHSA-w4c7-34wj-hqm8 (October 2026, CVSS 10.0, no CVE ID): only on proxies with an Enterprise "
                  "license, a request without a login can make the proxy read a local file and send it out, "
@@ -164,9 +165,9 @@ APP_ADVISORIES = {
                                    "paths, stored XSS in the hosted chat page"),
         ((2, 0, 0), (2, 41, 4), None, _N8N_SEP30),
         ((2, 42, 0), (2, 42, 1), None, _N8N_SEP30),
-        (None, (1, 123, 85), None, "14 October 2026 batch (1.x, no CVE IDs): Slack token theft and SSRF through "
-                                   "the Slack Trigger webhook, credential permission checks that members can "
-                                   "get around"),
+        (None, (1, 123, 85), None, "14 October 2026 batch (1.x, no CVE IDs): stored XSS through webhook "
+                                   "responses, credential permission checks that miss some sub-workflow "
+                                   "nodes, secrets leaking into execution data"),
         ((2, 0, 0), (2, 43, 5), None, _N8N_OCT14),
         ((2, 44, 0), (2, 44, 1), None, _N8N_OCT14),
         # From this batch n8n also patches a 3.x line.

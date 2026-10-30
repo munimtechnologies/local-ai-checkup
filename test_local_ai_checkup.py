@@ -198,6 +198,12 @@ class AppTests(unittest.TestCase):
         self.assertEqual(lac.app_flaws("n8n", (2, 44, 1))[:2], ([lac._N8N_OCT28], (2, 45, 5)))
         self.assertEqual(len(lac.app_flaws("n8n", (1, 123, 85))[0]), 1)
 
+    def test_n8n_october_descriptions_match_each_advisory(self):
+        # 2.44.0 is past the Slack Trigger fix (2.41.4) and the deprecated Code node fix (2.43.3).
+        for text in lac.app_flaws("n8n", (2, 44, 0))[0]:
+            self.assertNotIn("Slack", text)
+        self.assertIn("2.43.0-2.43.2 and 3.0.0", lac._N8N_OCT28)
+
     def test_anythingllm_flaws_match_the_site_checker(self):
         # munimv2.github.io/?product=anythingllm gives these (Windows-only advisory not counted).
         flaws, upgrade, unfixed = lac.app_flaws("anythingllm", (1, 16, 1))
