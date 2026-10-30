@@ -18,7 +18,7 @@ python3 local_ai_checkup.py
 
 Or install it as a command with pipx: `pipx install git+https://github.com/munimtechnologies/local-ai-checkup` and then run `local-ai-checkup`.
 
-No Python handy? The same advisory data is published as JSON in [ai-stack-advisories](https://github.com/munimtechnologies/ai-stack-advisories), which also runs as a free GitHub Action and as an [Apify Actor](https://apify.com/munim-inc/ai-stack-advisories). (The browser tools at munimv2.github.io are offline while GitHub reviews that account; this repository and the links above keep working.)
+No Python handy? Use the free browser checker at [munimv2.github.io](https://munimv2.github.io/): enter your server's version and it lists the known advisories and the version that fixes them. It runs in your browser and nothing you type is sent anywhere. The same advisory data is published as JSON in [ai-stack-advisories](https://github.com/munimtechnologies/ai-stack-advisories), which also runs as a free GitHub Action and as an [Apify Actor](https://apify.com/munim-inc/ai-stack-advisories).
 
 ## What it checks
 
