@@ -20,7 +20,7 @@ import sys
 import urllib.error
 import urllib.request
 
-__version__ = "0.4.4"
+__version__ = "0.4.5"
 
 PAID_CHECK_URL = "https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00"
 SMALL_OFFICE_URL = "https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01"
@@ -916,7 +916,8 @@ def check_exposure(rep):
                            "exposed Ollama servers in February 2026.")
             elif port == 6277:
                 detail += (" The MCP Inspector proxy can start programs on this machine; before 0.14.1 it did so "
-                           "for anyone who could reach it (CVE-2025-49596).")
+                           "for anyone who could reach it (CVE-2025-49596), and through 1.0.2 a malicious MCP server can "
+                           "still make it run commands (GHSA-4fc4-wcmh-4g86 and GHSA-6x67-4w4w-9f3w, October 2026).")
             elif port == 50052:
                 detail += " The llama.cpp RPC server has no authentication and is meant only for trusted networks."
             elif port == 4000:
@@ -1053,9 +1054,12 @@ def check_mcp_inspector(rep, ports):
     if info and not info["lan"]:
         rep.add("warn", "Something is listening on port 6277, the MCP Inspector proxy port",
                 "MCP Inspector before 0.14.1 let any web page you visited start programs on this machine "
-                "(CVE-2025-49596, CVSS 9.4).",
-                "Make sure it is 0.14.1 or newer (`npx @modelcontextprotocol/inspector@latest`) and stop it "
-                "when you are not using it.")
+                "(CVE-2025-49596, CVSS 9.4). Through 1.0.2, a malicious MCP server you connect to can make "
+                "it run commands (two critical advisories of 21 October 2026, CVSS 9.6, no CVE IDs); "
+                "2.0.0-2.11.0 have their own advisories, fixed in 2.12.0.",
+                "Use 1.0.3 or newer on the 1.x line, or 2.12.0 or newer "
+                "(`npx @modelcontextprotocol/inspector@latest`), connect it only to MCP servers you trust, "
+                "and stop it when you are not using it.")
 
 
 def parse_docker_ps(text):

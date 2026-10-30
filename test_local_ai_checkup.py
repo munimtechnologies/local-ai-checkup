@@ -198,6 +198,14 @@ class AppTests(unittest.TestCase):
         self.assertEqual(lac.app_flaws("n8n", (2, 44, 1))[:2], ([lac._N8N_OCT28], (2, 45, 5)))
         self.assertEqual(len(lac.app_flaws("n8n", (1, 123, 85))[0]), 1)
 
+    def test_mcp_inspector_advice_names_october_fixes(self):
+        rep = lac.Report()
+        lac.check_mcp_inspector(rep, {6277: {"local": True, "lan": False, "identified_as": None}})
+        self.assertEqual(len(rep.findings), 1)
+        self.assertIn("1.0.3", rep.findings[0]["fix"])
+        self.assertIn("2.12.0", rep.findings[0]["fix"])
+        self.assertIn("21 October 2026", rep.findings[0]["detail"])
+
     def test_n8n_october_descriptions_match_each_advisory(self):
         # 2.44.0 is past the Slack Trigger fix (2.41.4) and the deprecated Code node fix (2.43.3).
         for text in lac.app_flaws("n8n", (2, 44, 0))[0]:
