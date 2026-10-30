@@ -56,24 +56,28 @@ class ParseTests(unittest.TestCase):
         self.assertEqual(lac.ollama_feature_flaws((0, 13, 9)), [])
 
     def test_open_webui_and_comfyui_advisories(self):
-        self.assertEqual(len(lac.advisories_for((0, 8, 5), lac.OPEN_WEBUI_ADVISORIES)), 6)
-        self.assertEqual(len(lac.advisories_for((0, 9, 5), lac.OPEN_WEBUI_ADVISORIES)), 4)
-        self.assertEqual(len(lac.advisories_for((0, 10, 0), lac.OPEN_WEBUI_ADVISORIES)), 3)
+        self.assertEqual(len(lac.advisories_for((0, 8, 5), lac.OPEN_WEBUI_ADVISORIES)), 7)
+        self.assertEqual(len(lac.advisories_for((0, 9, 5), lac.OPEN_WEBUI_ADVISORIES)), 5)
+        self.assertEqual(len(lac.advisories_for((0, 10, 0), lac.OPEN_WEBUI_ADVISORIES)), 4)
         self.assertEqual(len(lac.advisories_for((0, 3, 76), lac.COMFYUI_ADVISORIES)), 1)
         self.assertEqual(lac.advisories_for((0, 28, 0), lac.COMFYUI_ADVISORIES), [])
 
     def test_open_webui_september_2026_advisories(self):
         flaws = lac.advisories_for((0, 11, 0), lac.OPEN_WEBUI_ADVISORIES)
-        self.assertEqual(len(flaws), 2)
+        self.assertEqual(len(flaws), 3)
         self.assertIn("CVE-2026-87016", flaws[0])
+        self.assertIn("GHSA-3vvh-g22g-jq6r", flaws[2])
         self.assertIn("GHSA-vpq8-f445-hcq7", flaws[1])
         for v in ((0, 11, 1), (0, 11, 3)):
             flaws = lac.advisories_for(v, lac.OPEN_WEBUI_ADVISORIES)
-            self.assertEqual(len(flaws), 1, v)
+            self.assertEqual(len(flaws), 2, v)
             self.assertIn("GHSA-vpq8-f445-hcq7", flaws[0])
-        self.assertEqual(lac.advisories_for((0, 11, 4), lac.OPEN_WEBUI_ADVISORIES), [])
-        self.assertEqual(lac.advisories_for((0, 12, 0), lac.OPEN_WEBUI_ADVISORIES), [])
-        self.assertEqual(lac.newest_fix(lac.OPEN_WEBUI_ADVISORIES), (0, 11, 4))
+        for v in ((0, 11, 4), (0, 12, 1)):
+            flaws = lac.advisories_for(v, lac.OPEN_WEBUI_ADVISORIES)
+            self.assertEqual(len(flaws), 1, v)
+            self.assertIn("GHSA-3vvh-g22g-jq6r", flaws[0])
+        self.assertEqual(lac.advisories_for((0, 12, 2), lac.OPEN_WEBUI_ADVISORIES), [])
+        self.assertEqual(lac.newest_fix(lac.OPEN_WEBUI_ADVISORIES), (0, 12, 2))
         self.assertEqual(lac.newest_fix(lac.COMFYUI_ADVISORIES), (0, 28, 0))
 
     def test_wide_host(self):
@@ -144,12 +148,12 @@ class AppTests(unittest.TestCase):
         self.assertTrue(lac.AI_IMAGE_HINT.search("mintplexlabs/anythingllm"))
 
     def test_app_flaws_match_the_site_checker(self):
-        # Same answers as munimv2.github.io and the Apify Actor give for these versions.
+        # Ranges from the vendors' GitHub advisories, checked 2026-10-30.
         flaws, upgrade, unfixed = lac.app_flaws("n8n", (2, 40, 0))
-        self.assertEqual((len(flaws), upgrade, unfixed), (2, (2, 41, 4), 0))
-        self.assertEqual(lac.app_flaws("n8n", (2, 41, 4))[0], [])
-        self.assertEqual(lac.app_flaws("n8n", (2, 42, 0))[1], (2, 42, 1))
-        self.assertEqual(lac.app_flaws("n8n", (1, 123, 80))[1], (1, 123, 83))
+        self.assertEqual((len(flaws), upgrade, unfixed), (4, (2, 45, 5), 0))
+        self.assertEqual(len(lac.app_flaws("n8n", (2, 41, 4))[0]), 2)
+        self.assertEqual(lac.app_flaws("n8n", (2, 42, 0))[1], (2, 45, 5))
+        self.assertEqual(lac.app_flaws("n8n", (1, 123, 80))[1], (1, 123, 89))
         flaws, upgrade, unfixed = lac.app_flaws("dify", (1, 13, 3))
         self.assertEqual((len(flaws), upgrade, unfixed), (3, (1, 16, 0), 0))
         flaws, upgrade, unfixed = lac.app_flaws("flowise", (3, 1, 4))
@@ -160,10 +164,10 @@ class AppTests(unittest.TestCase):
         self.assertEqual(lac.app_flaws("ragflow", (0, 24, 0))[:2], ([lac.APP_ADVISORIES["ragflow"]["items"][6][3]], (0, 25, 0)))
         self.assertEqual(lac.app_flaws("ragflow", (0, 25, 1))[0], [])
         flaws, upgrade, unfixed = lac.app_flaws("litellm", (1, 96, 0))
-        self.assertEqual((len(flaws), upgrade, unfixed), (2, (1, 100, 4), 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (3, (1, 103, 10), 0))
         flaws, upgrade, unfixed = lac.app_flaws("litellm", (1, 82, 7))
-        self.assertEqual((len(flaws), upgrade, unfixed), (9, (1, 95, 0), 1))
-        self.assertEqual(lac.app_flaws("litellm", (1, 101, 3))[0], [])
+        self.assertEqual((len(flaws), upgrade, unfixed), (10, (1, 103, 10), 1))
+        self.assertEqual(lac.app_flaws("litellm", (1, 101, 3))[0], [lac._LITELLM_W4C7])
         flaws, upgrade, unfixed = lac.app_flaws("langflow", (1, 10, 2))
         self.assertEqual((len(flaws), upgrade, unfixed), (4, (1, 12, 0), 0))
         self.assertEqual(lac.app_flaws("langflow", (1, 12, 0))[0], [])
@@ -175,7 +179,24 @@ class AppTests(unittest.TestCase):
             self.assertIn(lac._LITELLM_3CV6, lac.app_flaws("litellm", v)[0], v)
         for v in ((1, 88, 6), (1, 89, 7), (1, 93, 2), (1, 94, 3), (1, 95, 1), (1, 96, 2), (1, 97, 0)):
             self.assertNotIn(lac._LITELLM_3CV6, lac.app_flaws("litellm", v)[0], v)
-        self.assertEqual(lac.app_flaws("litellm", (1, 95, 0))[1], (1, 100, 4))
+        self.assertEqual(lac.app_flaws("litellm", (1, 95, 0))[1], (1, 103, 10))
+
+    def test_litellm_ghsa_w4c7_follows_each_release_line(self):
+        for v in ((1, 80, 0), (1, 103, 9), (1, 104, 0), (1, 104, 7), (1, 105, 5), (1, 106, 4)):
+            self.assertIn(lac._LITELLM_W4C7, lac.app_flaws("litellm", v)[0], v)
+        for v in ((1, 103, 10), (1, 104, 8), (1, 105, 6), (1, 106, 5), (1, 107, 0)):
+            self.assertNotIn(lac._LITELLM_W4C7, lac.app_flaws("litellm", v)[0], v)
+        self.assertEqual(lac.app_flaws("litellm", (1, 105, 0))[1], (1, 105, 6))
+        self.assertEqual(lac.app_flaws("litellm", (1, 106, 5))[0], [])
+
+    def test_n8n_october_2026_batches(self):
+        for v in ((1, 123, 89), (2, 45, 5), (2, 46, 1), (3, 0, 1), (3, 1, 0)):
+            self.assertEqual(lac.app_flaws("n8n", v)[0], [], v)
+        self.assertEqual(lac.app_flaws("n8n", (2, 46, 0))[:2], ([lac._N8N_OCT28], (2, 46, 1)))
+        self.assertEqual(lac.app_flaws("n8n", (3, 0, 0))[:2], ([lac._N8N_OCT28], (3, 0, 1)))
+        self.assertEqual(lac.app_flaws("n8n", (2, 44, 0))[:2], ([lac._N8N_OCT14, lac._N8N_OCT28], (2, 45, 5)))
+        self.assertEqual(lac.app_flaws("n8n", (2, 44, 1))[:2], ([lac._N8N_OCT28], (2, 45, 5)))
+        self.assertEqual(len(lac.app_flaws("n8n", (1, 123, 85))[0]), 1)
 
     def test_anythingllm_flaws_match_the_site_checker(self):
         # munimv2.github.io/?product=anythingllm gives these (Windows-only advisory not counted).
@@ -192,13 +213,18 @@ class AppTests(unittest.TestCase):
 
     def test_vllm_flaws_match_the_site_checker(self):
         flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 30, 0))
-        self.assertEqual((len(flaws), upgrade, unfixed), (2, (0, 31, 0), 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (5, (0, 32, 0), 0))
         self.assertIn("GHSA-h3rc-6mm3-gc2m", flaws[0])
-        self.assertEqual(len(lac.app_flaws("vllm", (0, 29, 0))[0]), 3)
-        self.assertEqual(len(lac.app_flaws("vllm", (0, 28, 0))[0]), 4)
+        self.assertEqual(len(lac.app_flaws("vllm", (0, 29, 0))[0]), 5)
+        self.assertEqual(len(lac.app_flaws("vllm", (0, 28, 0))[0]), 6)
         flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 11, 0))
-        self.assertEqual((len(flaws), upgrade, unfixed), (15, (0, 31, 0), 0))
-        self.assertEqual(lac.app_flaws("vllm", (0, 31, 0))[0], [])
+        self.assertEqual((len(flaws), upgrade, unfixed), (17, (0, 32, 0), 0))
+        flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 31, 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (2, (0, 32, 0), 0))
+        self.assertIn("CVE-2026-115917", flaws[0])
+        self.assertIn("CVE-2026-115915", flaws[1])
+        self.assertEqual(len(lac.app_flaws("vllm", (0, 29, 9))[0]), 5)
+        self.assertEqual(lac.app_flaws("vllm", (0, 32, 0))[0], [])
         found = lac.parse_docker_images("vllm/vllm-openai:v0.30.0\n")
         self.assertEqual(found["vllm"][0], (0, 30, 0))
         version = lac.APP_ENDPOINTS["vllm"][2]
@@ -248,8 +274,8 @@ class AppTests(unittest.TestCase):
         self.assertEqual(levels, ["warn", "risk", "info", "ok"])
         self.assertIn("2 of these list no fixed release yet", rep.findings[0]["fix"])
         self.assertIn("flowise.html", rep.findings[0]["fix"])
-        self.assertIn("2.41.4", rep.findings[1]["fix"])
-        self.assertEqual(rep.facts["apps"]["n8n"], {"version": "2.40.0", "source": "port 5678", "advisories": 2})
+        self.assertIn("2.45.5", rep.findings[1]["fix"])
+        self.assertEqual(rep.facts["apps"]["n8n"], {"version": "2.40.0", "source": "port 5678", "advisories": 4})
         self.assertIsNone(rep.facts["apps"]["dify"]["version"])
 
     def test_report_app_anythingllm(self):

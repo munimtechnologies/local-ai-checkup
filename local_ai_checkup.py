@@ -20,7 +20,7 @@ import sys
 import urllib.error
 import urllib.request
 
-__version__ = "0.4.2"
+__version__ = "0.4.3"
 
 PAID_CHECK_URL = "https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00"
 SMALL_OFFICE_URL = "https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01"
@@ -91,6 +91,10 @@ OPEN_WEBUI_ADVISORIES = [
                  "session token through the community-sharing message handler (GHSA-vpq8-f445-hcq7, CVSS 8.1), "
                  "and links in chats or shared-chat citations could steal viewers' tokens (GHSA-wf9m-46cp-c6h6, "
                  "GHSA-qpqv-xwg8-cqpj), plus terminal-proxy access control and memory-exhaustion bugs"),
+    # Published 2026-10-18 with no CVE ID; it affects 0.7.0 up to 0.12.1 (older versions are already flagged
+    # for the advisories above).
+    ((0, 12, 2), "GHSA-3vvh-g22g-jq6r (October 2026, no CVE ID): channel members can post messages that are "
+                 "shown as coming from a webhook by sending webhook fields from their own client"),
 ]
 
 COMFYUI_ADVISORIES = [
@@ -100,7 +104,7 @@ COMFYUI_ADVISORIES = [
 ]
 
 # Self-hosted AI apps. Each item is (first_affected or None, fixed_in or None, last_affected or None,
-# description), the same ranges as the checker at munimv2.github.io (checked 2026-10-11). Advisories
+# description), the same ranges as the checker at munimv2.github.io (checked 2026-10-11; advisories published up to 2026-10-28 added in 0.4.3). Advisories
 # with no fixed release name the last affected version instead. Several release lines are patched
 # separately (n8n 1.x and 2.x, LiteLLM), so a range can start after 2.0.0.
 _N8N_JULY = ("July 2026 batch: expression sandbox escape to command execution (CVSS 8.7), code execution in "
@@ -113,6 +117,16 @@ _N8N_SEP16 = ("16 September 2026 batch (at least 12 advisories, no CVE IDs, not 
 _N8N_SEP30 = ("30 September 2026 batch (15 advisories, 10 high, no CVE IDs, not in OSV): unauthenticated OAuth "
               "client persistence, unauthenticated approval of waiting executions, owner account takeover "
               "through the MCP workflow validator, Git node code execution")
+_N8N_OCT14 = ("14 October 2026 batch (at least 10 advisories, no CVE IDs): Slack token theft and SSRF through "
+              "the Slack Trigger webhook without a login, credential permission checks that members can get "
+              "around, OData and Quick Base filter injection from workflow input")
+_N8N_OCT28 = ("28 October 2026 batch (12 advisories, 3 high, no CVE IDs): code execution in the n8n main process "
+              "through deprecated Code nodes (CVSS 8.7), workflow expression isolation and GraphicsMagick flaws, "
+              "an embedded chat that skips user auth on some requests, credentials sent on cross-origin redirects")
+# GHSA-w4c7-34wj-hqm8 lists one fixed release per line: 1.103.10, 1.104.8, 1.105.6 and 1.106.5.
+_LITELLM_W4C7 = ("GHSA-w4c7-34wj-hqm8 (October 2026, CVSS 10.0, no CVE ID): only on proxies with an Enterprise "
+                 "license, a request without a login can make the proxy read a local file and send it out, "
+                 "leaking the master key and provider keys")
 _LITELLM_7HP6 = ("GHSA-7hp6-4w63-5g45 (CVSS 9.9, no CVE ID): any internal user can forge an admin session, become "
                  "proxy admin and run host commands; workaround EXPERIMENTAL_UI_LOGIN=false")
 # CVE-2026-84377 (GHSA-3cv6-jpf6-8222): the advisory's range says <1.94.0, but its patched versions and the
@@ -150,6 +164,18 @@ APP_ADVISORIES = {
                                    "paths, stored XSS in the hosted chat page"),
         ((2, 0, 0), (2, 41, 4), None, _N8N_SEP30),
         ((2, 42, 0), (2, 42, 1), None, _N8N_SEP30),
+        (None, (1, 123, 85), None, "14 October 2026 batch (1.x, no CVE IDs): Slack token theft and SSRF through "
+                                   "the Slack Trigger webhook, credential permission checks that members can "
+                                   "get around"),
+        ((2, 0, 0), (2, 43, 5), None, _N8N_OCT14),
+        ((2, 44, 0), (2, 44, 1), None, _N8N_OCT14),
+        # From this batch n8n also patches a 3.x line.
+        (None, (1, 123, 89), None, "28 October 2026 batch (1.x, no CVE IDs): workflow expression isolation flaw "
+                                   "(High), an embedded chat that skips user auth on some requests, the NocoDB "
+                                   "node sending its API token to other hosts"),
+        ((2, 0, 0), (2, 45, 5), None, _N8N_OCT28),
+        ((2, 46, 0), (2, 46, 1), None, _N8N_OCT28),
+        ((3, 0, 0), (3, 0, 1), None, _N8N_OCT28),
     ]},
     "dify": {"name": "Dify", "items": [
         (None, (1, 9, 0), None, "CVE-2025-59422 and others: signed-in users can read other people's chats; XSS "
@@ -294,6 +320,10 @@ APP_ADVISORIES = {
         ((1, 101, 0), (1, 101, 3), None, _LITELLM_7HP6),
         ((1, 102, 0), (1, 102, 2), None, _LITELLM_7HP6),
         ((1, 103, 0), (1, 103, 1), None, _LITELLM_7HP6),
+        (None, (1, 103, 10), None, _LITELLM_W4C7),
+        ((1, 104, 0), (1, 104, 8), None, _LITELLM_W4C7),
+        ((1, 105, 0), (1, 105, 6), None, _LITELLM_W4C7),
+        ((1, 106, 0), (1, 106, 5), None, _LITELLM_W4C7),
     ]},
     "vllm": {"name": "vLLM", "items": [
         ((0, 6, 5), (0, 8, 5), None, "CVE-2025-47277, CVE-2025-32444, CVE-2025-29783: only with distributed KV-cache "
@@ -338,6 +368,19 @@ APP_ADVISORIES = {
         (None, (0, 31, 0), None, "6 and 9 October 2026 batches (no CVE IDs, not in OSV): per-request processor "
                                  "arguments exhaust memory with many multimodal models (CVSS 7.5), prompt_logprobs "
                                  "crashes the server for every tenant (CVSS 7.7), cache aliasing between requests"),
+        ((0, 10, 1), (0, 31, 0), None, "27 October 2026 batch (6 advisories, no CVE IDs): request-set frame and "
+                                       "patch counts exhaust memory or CPU in several video and vision "
+                                       "preprocessors (one is an incomplete fix of CVE-2026-34755), and error "
+                                       "messages leak heap addresses"),
+        (None, (0, 32, 0), None, "CVE-2026-115917 (Low): by default the API accepts cross-origin requests from "
+                                 "any website, so a page open in a browser that can reach the server can call it; "
+                                 "set --allowed-origins"),
+        # The 20 October advisories name 0.30.0 and 0.31.0 as affected.
+        ((0, 30, 0), (0, 32, 0), None, "CVE-2026-115915 (CVSS 8.1): images are decoded by their content, not their "
+                                       "declared type, so an EPS image can reach an old Ghostscript on the host "
+                                       "(CVE-2024-29510) and run code; CVE-2026-115914, CVE-2026-115913: one "
+                                       "crafted image or long audio clip crashes DeepSeek-OCR or Phi-4 multimodal "
+                                       "models"),
     ]},
 }
 
