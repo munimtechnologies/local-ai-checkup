@@ -20,7 +20,7 @@ import sys
 import urllib.error
 import urllib.request
 
-__version__ = "0.4.5"
+__version__ = "0.4.6"
 
 PAID_CHECK_URL = "https://buy.stripe.com/5kQcN43Gcfii6Jo47L3Ru00"
 SMALL_OFFICE_URL = "https://buy.stripe.com/aFabJ0foU2vw6Jo8o13Ru01"
@@ -104,7 +104,7 @@ COMFYUI_ADVISORIES = [
 ]
 
 # Self-hosted AI apps. Each item is (first_affected or None, fixed_in or None, last_affected or None,
-# description), the same ranges as the checker at munimv2.github.io (checked 2026-10-11; advisories published up to 2026-10-28 added in 0.4.3). Advisories
+# description), the same ranges as the checker at munimv2.github.io (checked 2026-10-11; advisories published up to 2026-10-28 added in 0.4.3, up to 2026-11-07 in 0.4.6). Advisories
 # with no fixed release name the last affected version instead. Several release lines are patched
 # separately (n8n 1.x and 2.x, LiteLLM), so a range can start after 2.0.0.
 _N8N_JULY = ("July 2026 batch: expression sandbox escape to command execution (CVSS 8.7), code execution in "
@@ -289,6 +289,9 @@ APP_ADVISORIES = {
                                       "code execution (High); from 1.5.0 also CVE-2026-105741, X-Forwarded-For "
                                       "spoofing"),
         ((1, 0, 16), (1, 12, 0), None, "GHSA-33p4-w7j3-33mw: unsafe eval() on Tool-Mode input options (Low)"),
+        (None, (1, 13, 0), None, "GHSA-qvqp-mxh4-f27w (November 2026, no CVE ID): only for flows that use the URL "
+                                 "component, a huge or compression-bomb response is read into memory with no size "
+                                 "cap and can crash Langflow for all users (CVSS 6.5)"),
     ]},
     "litellm": {"name": "LiteLLM", "items": [
         (None, (1, 61, 15), None, "CVE-2025-0628: a user can become proxy admin (High)"),
@@ -382,6 +385,19 @@ APP_ADVISORIES = {
                                        "(CVE-2024-29510) and run code; CVE-2026-115914, CVE-2026-115913: one "
                                        "crafted image or long audio clip crashes DeepSeek-OCR or Phi-4 multimodal "
                                        "models"),
+        # Published 2-7 November 2026, no CVE IDs and not in OSV when checked on 2026-11-07 (feed v1.2.4/v1.2.5).
+        ((0, 6, 0), (0, 33, 0), None, "GHSA-5r3c-5x4v-8gjh (November 2026, no CVE ID): one small request listing many "
+                                      "compressed-image URLs makes vLLM download and decode all of them before the "
+                                      "prompt-length check, exhausting memory, CPU and connections (CVSS 7.5)"),
+        ((0, 28, 0), (0, 33, 0), None, "GHSA-q9v9-qpjp-fc24 (November 2026, no CVE ID): only with --skip-tokenizer-init, "
+                                       "one request with an out-of-range prompt token ID crashes the engine for every "
+                                       "tenant until a restart (CVSS 7.5)"),
+        (None, (0, 33, 0), None, "GHSA-qrj2-j723-m6w8 (November 2026, no CVE ID): when serving an untrusted model "
+                                 "repository, a speculators_config entry in its config.json swaps in another model "
+                                 "and tokenizer path, even with trust_remote_code=False (CVSS 5.4)"),
+        ((0, 3, 0), (0, 30, 0), None, "GHSA-mwgq-9582-w2vf (November 2026, no CVE ID): one malformed request makes the "
+                                      "HTTP 400 reply repeat the bad input once per validation error, costing large "
+                                      "amounts of CPU and memory (CVSS 5.3)"),
     ]},
 }
 
@@ -1056,8 +1072,11 @@ def check_mcp_inspector(rep, ports):
                 "MCP Inspector before 0.14.1 let any web page you visited start programs on this machine "
                 "(CVE-2025-49596, CVSS 9.4). Through 1.0.2, a malicious MCP server you connect to can make "
                 "it run commands (two critical advisories of 21 October 2026, CVSS 9.6, no CVE IDs); "
-                "2.0.0-2.11.0 have their own advisories, fixed in 2.12.0.",
-                "Use 1.0.3 or newer on the 1.x line, or 2.12.0 or newer "
+                "2.0.0-2.11.0 have their own advisories, fixed in 2.12.0. Advisories of 4-5 November 2026 "
+                "(Medium, no CVE IDs) need 1.0.4 or 2.14.0: a malicious server's tool output-schema regex can "
+                "freeze the Inspector, and on 2.x an untrusted MCP App can escape its sandbox and a crafted "
+                "server.json import can add flags such as docker --privileged to the launched command.",
+                "Use 1.0.4 or newer on the 1.x line, or 2.14.0 or newer "
                 "(`npx @modelcontextprotocol/inspector@latest`), connect it only to MCP servers you trust, "
                 "and stop it when you are not using it.")
 

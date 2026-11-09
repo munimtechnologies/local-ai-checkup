@@ -1,10 +1,11 @@
 # Copyright 2026 Munim, Inc.
 # SPDX-License-Identifier: Apache-2.0
-"""Checks that skills/local-ai-checkup/SKILL.md stays true to the script it describes.
+"""Checks that skills/local-ai-checkup/SKILL.md stays true to the script bundled with it.
 
-The SKILL.md checks always run. The checks against local_ai_checkup.py run whenever the
-script sits next to this file (a checkout of the repository); a copy of only the skill
-files, without the script, skips them and says so.
+The SKILL.md checks always run. The bundled script (skills/local-ai-checkup/scripts/
+local_ai_checkup.py) is run whenever it is present. In a checkout of the repository the bundled
+copy must also be byte-identical to local_ai_checkup.py at the root, so a release can't update
+one and forget the other.
 """
 import json
 import os
@@ -16,14 +17,19 @@ import unittest
 HERE = os.path.dirname(os.path.abspath(__file__))
 SKILL_DIR = os.path.join(HERE, "skills", "local-ai-checkup")
 SKILL = os.path.join(SKILL_DIR, "SKILL.md")
-SCRIPT = os.path.join(HERE, "local_ai_checkup.py")
-HAVE_SCRIPT = os.path.exists(SCRIPT)
-NO_SCRIPT = "local_ai_checkup.py is not next to this test (skill files only)"
+BUNDLED = os.path.join(SKILL_DIR, "scripts", "local_ai_checkup.py")
+ROOT_SCRIPT = os.path.join(HERE, "local_ai_checkup.py")
+HAVE_BUNDLED = os.path.exists(BUNDLED)
+IN_CHECKOUT = os.path.isdir(os.path.join(HERE, ".git"))
+
+
+def read(path):
+    with open(path, encoding="utf-8") as f:
+        return f.read().replace("\r\n", "\n")
 
 
 def read_skill():
-    with open(SKILL, encoding="utf-8") as f:
-        return f.read().replace("\r\n", "\n")
+    return read(SKILL)
 
 
 def frontmatter(text):
@@ -70,7 +76,7 @@ class SkillText(unittest.TestCase):
     def test_documented_flags_and_exit_codes(self):
         body = frontmatter(read_skill())[1]
         for text in ("--json", "--version", "`0` all clear", "`1` warnings only",
-                     "`2` at least one risk"):
+                     "`2` at least one risk", "scripts/local_ai_checkup.py"):
             self.assertIn(text, body)
 
     def test_documented_levels_and_keys(self):
@@ -85,17 +91,30 @@ class SkillText(unittest.TestCase):
         self.assertIn("Never suggest it unprompted", body)
         self.assertIn("HARDENING.md", body)
 
+    def test_no_runtime_download(self):
+        # The skill runs its bundled copy; it must not tell agents to fetch code at run time.
+        body = read_skill()
+        for text in ("curl ", "wget ", "raw.githubusercontent.com", "pipx install", "pip install git+",
+                     "Invoke-WebRequest"):
+            self.assertNotIn(text, body)
+
     def test_no_secrets_or_address_fields(self):
         body = read_skill().lower()
         for word in ("password:", "api_key=", "token="):
             self.assertNotIn(word, body)
 
 
-@unittest.skipUnless(HAVE_SCRIPT, NO_SCRIPT)
-class SkillMatchesScript(unittest.TestCase):
+@unittest.skipUnless(HAVE_BUNDLED, "skills/local-ai-checkup/scripts/local_ai_checkup.py is not present")
+class BundledScript(unittest.TestCase):
     def run_script(self, *args):
-        return subprocess.run([sys.executable, SCRIPT] + list(args), capture_output=True,
-                              text=True, timeout=300, env=dict(os.environ))
+        env = dict(os.environ, PYTHONIOENCODING="utf-8")
+        return subprocess.run([sys.executable, BUNDLED] + list(args), capture_output=True,
+                              encoding="utf-8", errors="replace", timeout=300, env=env)
+
+    def test_skill_names_the_bundled_version(self):
+        m = re.search(r'^__version__ = "(\d+\.\d+\.\d+)"', read(BUNDLED), re.M)
+        self.assertIsNotNone(m)
+        self.assertIn("version %s" % m.group(1), frontmatter(read_skill())[1])
 
     def test_version_flag(self):
         r = self.run_script("--version")
@@ -116,10 +135,17 @@ class SkillMatchesScript(unittest.TestCase):
         self.assertEqual(r.returncode, expected)
 
     def test_documented_flags_exist_in_script(self):
-        with open(SCRIPT, encoding="utf-8") as f:
-            src = f.read()
+        src = read(BUNDLED)
         for flag in ("--json", "--version"):
             self.assertIn('"%s"' % flag, src)
+
+
+@unittest.skipUnless(IN_CHECKOUT and HAVE_BUNDLED, "not a checkout of the repository")
+class CheckoutConsistency(unittest.TestCase):
+    def test_bundled_copy_equals_root_script(self):
+        with open(BUNDLED, "rb") as a, open(ROOT_SCRIPT, "rb") as b:
+            self.assertEqual(a.read(), b.read(),
+                             "copy local_ai_checkup.py to skills/local-ai-checkup/scripts/ on every release")
 
     def test_linked_repo_files_exist(self):
         self.assertTrue(os.path.exists(os.path.join(HERE, "HARDENING.md")))

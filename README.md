@@ -45,7 +45,7 @@ No Python handy? Use the free browser checker at [munimv2.github.io](https://mun
   - Langflow's MCP stdio command injection (CVE-2026-105697) and Dify's cross-workspace advisories.
   A tag such as `latest` or `main` doesn't say which release is running, so it asks you to look the version up instead.
 - **ComfyUI.** Versions before 0.28.0 (CVE-2026-56673 and CVE-2026-56671, unauthenticated file reads, plus two stored XSS flaws). In 2026, [exposed ComfyUI servers were hijacked for cryptomining](https://labs.cloudsecurityalliance.org/research/csa-research-note-ai-workload-exposure-cryptomining-20260408/).
-- **MCP Inspector.** A running proxy on port 6277. Versions before 0.14.1 allowed remote code execution from a web page (CVE-2025-49596). Through 1.0.2, a malicious MCP server you connect to can make it run commands (two critical advisories of 21 October 2026, no CVE IDs; fixed in 1.0.3). The 2.x line is fixed in 2.12.0.
+- **MCP Inspector.** A running proxy on port 6277. Versions before 0.14.1 allowed remote code execution from a web page (CVE-2025-49596). Through 1.0.2, a malicious MCP server you connect to can make it run commands (two critical advisories of 21 October 2026, no CVE IDs; fixed in 1.0.3). The 2.x line is fixed in 2.12.0. Medium advisories of 4-5 November 2026 (no CVE IDs) are fixed in 1.0.4 and, on the 2.x line, 2.14.0.
 - **Docker.** Containers that publish AI ports on `0.0.0.0`. On Linux, those skip ufw and firewalld.
 - **Model fit.** It flags installed or loaded models that won't fit in GPU memory and are quietly running on the CPU. It reads NVIDIA, AMD (ROCm) and Apple Silicon memory.
 - **Why Ollama isn't using the GPU.** An NVIDIA driver older than [Ollama's minimum](https://docs.ollama.com/gpu) (550, or 570 for compute capability 5.0-6.2 cards such as the GTX 10 series), a card below compute capability 5.0, and settings that hide the GPU: `CUDA_VISIBLE_DEVICES=-1`, `ROCR_VISIBLE_DEVICES=-1`, `HIP_VISIBLE_DEVICES=-1`, `GGML_VK_VISIBLE_DEVICES=-1` or a CPU-only `OLLAMA_LLM_LIBRARY`.
@@ -61,6 +61,16 @@ Step-by-step fixes for every finding are in [HARDENING.md](HARDENING.md).
 - It can't tell whether your router, cloud firewall or host firewall blocks a port. To check internet exposure, look up your public IP on [LeakIX](https://leakix.net) or Shodan.
 
 Exit codes: `0` means all clear, `1` means warnings, `2` means at least one risk. That makes it usable in scripts and CI.
+
+## Use with coding agents
+
+The repository includes an [agent skill](skills/local-ai-checkup/SKILL.md) for coding agents such as Claude Code, Codex and Cursor. It tells the agent when to run the check, how to read the JSON report, and to change nothing without asking you. The script is bundled in the skill folder, so the agent runs it without downloading anything.
+
+```bash
+npx skills add munimtechnologies/local-ai-checkup
+```
+
+Listed on [skills.sh](https://skills.sh/munimtechnologies/local-ai-checkup). Update it with `npx skills update local-ai-checkup` when a new release adds advisories.
 
 ## Tests
 
@@ -78,6 +88,7 @@ This is general technical information. It isn't a security certification.
 
 ## Changelog
 
+- **0.4.6**: Advisories published 2-7 November 2026, checked against each project's GitHub security advisories on 7 November 2026 (none had a CVE ID or an OSV record then): vLLM GHSA-5r3c-5x4v-8gjh and GHSA-q9v9-qpjp-fc24 (both High, CVSS 7.5) and GHSA-qrj2-j723-m6w8, fixed in 0.33.0, plus GHSA-mwgq-9582-w2vf (fixed in 0.30.0); Langflow GHSA-qvqp-mxh4-f27w (URL component, fixed in 1.13.0); MCP Inspector's 4-5 November advisories (fixed in 1.0.4 and 2.14.0). The agent skill in `skills/local-ai-checkup` now carries this script, so agents run it without downloading anything.
 - **0.4.5**: MCP Inspector: the advice now covers the nine advisories published on 21 October 2026 (no CVE IDs; checked against modelcontextprotocol/inspector's GitHub security advisories on 30 October 2026). Through 1.0.2, a malicious MCP server can make the Inspector run commands (GHSA-4fc4-wcmh-4g86 and GHSA-6x67-4w4w-9f3w, both critical, CVSS 9.6); they are fixed in 1.0.3 on the 1.x line and in 2.12.0 on the 2.x line. The old advice, "0.14.1 or newer", was no longer enough.
 - **0.4.4**: n8n's October descriptions now match each advisory's own range (the browser checker's per-advisory data, checked 30 October 2026). 0.4.3 named the Slack Trigger advisory (GHSA-3c3p-5959-3ghr, fixed in 1.123.83, 2.41.4 and 2.42.1) and the deprecated Code node advisory (GHSA-9p7v-45m2-wxgj, fixed in 2.42.6, 2.43.3 and 3.0.1) for versions they don't affect; which versions are flagged and the upgrade advice are unchanged. 0.4.3's note also undercounted: the two batches hold 27 advisories, at least 6 of them rated high.
 - **0.4.3**: Advisories published from 14 to 28 October 2026, checked against each project's GitHub security advisories on 30 October 2026. LiteLLM GHSA-w4c7-34wj-hqm8 (CVSS 10.0, only proxies with an Enterprise license: a request without a login can leak the master key; fixed in 1.103.10, 1.104.8, 1.105.6 and 1.106.5). n8n's 14 October and 28 October batches (at least 22 advisories, 3 high, no CVE IDs; fixed in 1.123.89, 2.45.5, 2.46.1 and 3.0.1), including the new 3.x line. vLLM's 20 October CVEs (fixed in 0.32.0: permissive default CORS on every version, and on 0.30.0-0.31.0 code execution through EPS images when the host has an old Ghostscript) and its 27 October batch (fixed in 0.31.0). Open WebUI GHSA-3vvh-g22g-jq6r (webhook impersonation in channels, fixed in 0.12.2).

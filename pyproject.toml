@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "local-ai-checkup"
-version = "0.4.5"
+version = "0.4.6"
 description = "Free read-only health and safety check for local AI setups (Ollama, LM Studio, llama.cpp, Open WebUI, ComfyUI, n8n, Dify, RAGFlow, AnythingLLM, Langflow, Flowise, LiteLLM, vLLM...). By MV2 of Munim, Inc., with AI agents."
 readme = "README.md"
 license = {text = "Apache-2.0"}

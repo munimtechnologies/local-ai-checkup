@@ -169,8 +169,8 @@ class AppTests(unittest.TestCase):
         self.assertEqual((len(flaws), upgrade, unfixed), (10, (1, 103, 10), 1))
         self.assertEqual(lac.app_flaws("litellm", (1, 101, 3))[0], [lac._LITELLM_W4C7])
         flaws, upgrade, unfixed = lac.app_flaws("langflow", (1, 10, 2))
-        self.assertEqual((len(flaws), upgrade, unfixed), (4, (1, 12, 0), 0))
-        self.assertEqual(lac.app_flaws("langflow", (1, 12, 0))[0], [])
+        self.assertEqual((len(flaws), upgrade, unfixed), (5, (1, 13, 0), 0))
+        self.assertEqual(lac.app_flaws("langflow", (1, 13, 0))[0], [])
 
     def test_litellm_cve_2026_84377_follows_each_release_line(self):
         # OSV's record for GHSA-3cv6-jpf6-8222 (checked 2026-10-13): one range per release line, although
@@ -202,8 +202,8 @@ class AppTests(unittest.TestCase):
         rep = lac.Report()
         lac.check_mcp_inspector(rep, {6277: {"local": True, "lan": False, "identified_as": None}})
         self.assertEqual(len(rep.findings), 1)
-        self.assertIn("1.0.3", rep.findings[0]["fix"])
-        self.assertIn("2.12.0", rep.findings[0]["fix"])
+        self.assertIn("1.0.4", rep.findings[0]["fix"])
+        self.assertIn("2.14.0", rep.findings[0]["fix"])
         self.assertIn("21 October 2026", rep.findings[0]["detail"])
 
     def test_n8n_october_descriptions_match_each_advisory(self):
@@ -227,24 +227,49 @@ class AppTests(unittest.TestCase):
 
     def test_vllm_flaws_match_the_site_checker(self):
         flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 30, 0))
-        self.assertEqual((len(flaws), upgrade, unfixed), (5, (0, 32, 0), 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (8, (0, 33, 0), 0))
         self.assertIn("GHSA-h3rc-6mm3-gc2m", flaws[0])
-        self.assertEqual(len(lac.app_flaws("vllm", (0, 29, 0))[0]), 5)
-        self.assertEqual(len(lac.app_flaws("vllm", (0, 28, 0))[0]), 6)
+        self.assertEqual(len(lac.app_flaws("vllm", (0, 29, 0))[0]), 9)
+        self.assertEqual(len(lac.app_flaws("vllm", (0, 28, 0))[0]), 10)
         flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 11, 0))
-        self.assertEqual((len(flaws), upgrade, unfixed), (17, (0, 32, 0), 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (20, (0, 33, 0), 0))
         flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 31, 0))
-        self.assertEqual((len(flaws), upgrade, unfixed), (2, (0, 32, 0), 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (5, (0, 33, 0), 0))
         self.assertIn("CVE-2026-115917", flaws[0])
         self.assertIn("CVE-2026-115915", flaws[1])
-        self.assertEqual(len(lac.app_flaws("vllm", (0, 29, 9))[0]), 5)
-        self.assertEqual(lac.app_flaws("vllm", (0, 32, 0))[0], [])
+        self.assertEqual(len(lac.app_flaws("vllm", (0, 29, 9))[0]), 9)
+        self.assertEqual(lac.app_flaws("vllm", (0, 33, 0))[0], [])
         found = lac.parse_docker_images("vllm/vllm-openai:v0.30.0\n")
         self.assertEqual(found["vllm"][0], (0, 30, 0))
         version = lac.APP_ENDPOINTS["vllm"][2]
         self.assertEqual(version({"version": "0.31.0"}), "0.31.0")
         self.assertIsNone(version({"version": "0.31.0", "object": "list"}))
         self.assertEqual(lac.APP_ENDPOINTS["vllm"][:2], (8000, "/version"))
+
+    def test_november_2026_advisories(self):
+        # vLLM, Langflow and MCP Inspector advisories published 2-7 November 2026 (feed v1.2.4/v1.2.5).
+        flaws, upgrade, unfixed = lac.app_flaws("vllm", (0, 32, 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (3, (0, 33, 0), 0))
+        self.assertIn("GHSA-5r3c-5x4v-8gjh", flaws[0])
+        def has(v, ghsa):
+            return any(ghsa in d for d in lac.app_flaws("vllm", v)[0])
+        self.assertFalse(has((0, 5, 9), "GHSA-5r3c"))
+        self.assertTrue(has((0, 6, 0), "GHSA-5r3c"))
+        self.assertFalse(has((0, 27, 0), "GHSA-q9v9"))
+        self.assertTrue(has((0, 28, 0), "GHSA-q9v9"))
+        self.assertTrue(has((0, 1, 0), "GHSA-qrj2"))
+        self.assertFalse(has((0, 2, 9), "GHSA-mwgq"))
+        self.assertTrue(has((0, 29, 9), "GHSA-mwgq"))
+        self.assertFalse(has((0, 30, 0), "GHSA-mwgq"))
+        flaws, upgrade, unfixed = lac.app_flaws("langflow", (1, 12, 0))
+        self.assertEqual((len(flaws), upgrade, unfixed), (1, (1, 13, 0), 0))
+        self.assertIn("GHSA-qvqp-mxh4-f27w", flaws[0])
+        rep = lac.Report()
+        lac.report_app(rep, "vllm", {"version": (0, 32, 0), "source": "port 8000", "lan": False})
+        self.assertIn("0.33.0", rep.findings[0]["fix"])
+        rep = lac.Report()
+        lac.check_mcp_inspector(rep, {6277: {"local": True, "lan": False, "identified_as": None}})
+        self.assertIn("4-5 November 2026", rep.findings[0]["detail"])
 
     def test_vllm_ghsa_mm38_uses_the_release_tag_range(self):
         # The advisory says "<= 0.8.5"; the Nemotron-VL code it names ships from 0.10.2 to 0.24.x.
@@ -283,7 +308,7 @@ class AppTests(unittest.TestCase):
         lac.report_app(rep, "n8n", {"version": (2, 40, 0), "source": "port 5678", "lan": True})
         lac.report_app(rep, "dify", {"version": None, "source": "Docker image langgenius/dify-api:latest",
                                      "lan": False})
-        lac.report_app(rep, "langflow", {"version": (1, 12, 0), "source": "port 7860", "lan": False})
+        lac.report_app(rep, "langflow", {"version": (1, 13, 0), "source": "port 7860", "lan": False})
         levels = [f["level"] for f in rep.findings]
         self.assertEqual(levels, ["warn", "risk", "info", "ok"])
         self.assertIn("2 of these list no fixed release yet", rep.findings[0]["fix"])
